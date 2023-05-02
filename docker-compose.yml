@@ -8,6 +8,8 @@ services:
       - 8085:8085
     networks:
       - tim
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   tim:
