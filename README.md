@@ -25,7 +25,7 @@ Spring Boot applications support externalized configuration through *.properties
 Application configuration can be found here: `${PROJECT_ROOT}/src/main/resources/application.properties`.  
 
 If there are issues with Ruuter connection to TIM:  
-Go to src -> main -> resources -> application.properties & modify `security.allowlist.jwt` value to have container names and relevant service URL  
+Go to [src -> main -> resources -> application.properties](https://github.com/buerokratt/TIM/blob/main/src/main/resources/application.properties) & modify `security.allowlist.jwt` value to have container names and relevant service URL  
 for example:  
 `security.allowlist.jwt=ruuter-v1-public,ruuter-v1-private,ruuter-v2-private,ruuter-v2-public,dmapper,resql,tim,tim-postgresql,chat-widget,customer-service,127.0.0.1,::1`
 
