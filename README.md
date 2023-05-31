@@ -24,6 +24,8 @@ Spring Boot applications support externalized configuration through *.properties
 
 Application configuration can be found here: `${PROJECT_ROOT}/src/main/resources/application.properties`.  
 
+## 2.0 Use security.allowlist.jwt` to define allowed participants to access TIM
+
 If there are issues with Ruuter connection to TIM:  
 Go to [src -> main -> resources -> application.properties](https://github.com/buerokratt/TIM/blob/main/src/main/resources/application.properties) & modify `security.allowlist.jwt` value to have container names and relevant service URL  
 for example:  
