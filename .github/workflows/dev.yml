@@ -3,7 +3,7 @@ name: Deploy Docker Compose
 on:
   push:
     branches:
-      - feature-dev-pipeline
+      - dev
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
