@@ -35,7 +35,7 @@ jobs:
             ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.MAIN_SERVER_IP }} 'mkdir -p /opt/pipelines/feature-dev-pipeline/tim'
             fi
 
-  
+
       - name: Push repository to MAIN server
         run: rsync -az --exclude='.git/' -e "ssh -i $HOME/.ssh/id_rsa" $GITHUB_WORKSPACE/ ubuntu@${{ secrets.MAIN_SERVER_IP }}:/opt/pipelines/feature-dev-pipeline/
 
