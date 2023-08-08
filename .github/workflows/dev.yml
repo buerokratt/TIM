@@ -7,8 +7,7 @@ on:
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'  # Only run for the 'main' branch
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
