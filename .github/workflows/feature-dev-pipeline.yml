@@ -8,7 +8,7 @@ on:
 jobs:
   deploy-dev-test:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/feature-dev-pipeline'  # Only run for the 'main' branch
+    if: github.ref == 'refs/heads/feature-dev-pipeline'  # Only run for the 'feature' branch
 
     steps:
       - name: Checkout repository
@@ -17,7 +17,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.TIM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.MAIN_SERVER_IP }} >> ~/.ssh/known_hosts
       - name: Create directory on remote server
