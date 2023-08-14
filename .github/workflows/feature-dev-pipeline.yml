@@ -42,4 +42,4 @@ jobs:
 
       - name: Run Docker Compose on MAIN server
         run: |
-          ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.MAIN_SERVER_IP }} 'cd /opt/etapp2/dev/tim && docker-compose down && docker-compose up -d --build'223
+          ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.MAIN_SERVER_IP }} 'cd /opt/etapp2/dev/tim && docker-compose down && docker-compose up -d --build'
