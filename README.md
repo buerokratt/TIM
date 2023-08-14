@@ -1,4 +1,4 @@
-# TARA-integration module installation and configuration guide.
+# TARA-integration module installation and configuration guide. 
 
 # 0. Used variables description
 
