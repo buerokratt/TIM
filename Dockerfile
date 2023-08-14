@@ -10,7 +10,7 @@ COPY src src
 COPY libs libs
 RUN ./mvnw install:install-file -Dfile=libs/id-log-${ID_LOG_VERSION}.jar -DgroupId=ee.ria.commons -DartifactId=id-log -Dversion=${ID_LOG_VERSION} -Dpackaging=jar -DgeneratePom=true
 
-# keytool
+# keytool 
 ARG KEY_PASS="ppjjpp"
 RUN keytool -genkeypair -alias tomcat -keyalg RSA -keysize 2048 -keystore "keystore.jks" -dname "CN=, OU=, O=, L=, ST=, C=" -storepass KEY_PASS -validity 3650
 RUN keytool -genkeypair -alias jwtsign -keyalg RSA -keysize 2048 -keystore "jwtkeystore.jks" -dname "CN=, OU=, O=, L=, ST=, C=" -storepass KEY_PASS -validity 3650
