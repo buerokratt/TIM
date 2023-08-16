@@ -26,4 +26,4 @@ jobs:
           ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} docker pull ghcr.io/buerokratt/tim:2.0.230816074750
       - name: Update Docker Compose File
         run: |
-          ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} sed -i 's|image: test|image: ghcr.io/buerokratt/tim:2.0.230816074750|g' /home/ubuntu/install/Installation-Guides/default-setup/backoffice-and-bykstack/docker-compose.yml
+          ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} cd /home/ubuntu && mkdir teeeest
