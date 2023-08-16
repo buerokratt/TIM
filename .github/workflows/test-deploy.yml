@@ -26,7 +26,7 @@ jobs:
           ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} docker pull ghcr.io/buerokratt/tim:2.0.230816074750
       - name: Update Docker Compose File
         run: |
-          ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} sed -i 's#service tim image: test#service tim image: ghcr.io/buerokratt/tim:2.0.230816074750#' /home/ubuntu/install/Installation-Guides/default-setup/backoffice-and-bykstack/docker-compose.yml
+          ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} sed -i 's|service tim image: test|service tim image: ghcr.io/buerokratt/tim:2.0.230816074750#' /home/ubuntu/install/Installation-Guides/default-setup/backoffice-and-bykstack/docker-compose.yml
       - name: Run Docker Compose on TEST server
         run: |
           ssh -i $HOME/.ssh/id_rsa ubuntu@${{ secrets.TEST_SERVER_IP }} 'cd /home/ubuntu/install/Installation-Guides/default-setup/backoffice-and-bykstack && docker-compose down && docker-compose up -d --build'
