@@ -3,12 +3,12 @@ name: Deploy Docker Compose
 on:
   push:
     branches:
-      - feature-dev-pipeline
+      - dev
 
 jobs:
   deploy-dev-test:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/feature-dev-pipeline'  # Only run for the 'feature' branch
+    if: github.ref == 'refs/heads/dev'  # Only run for the 'feature' branch
 
     steps:
       - name: Checkout repository
