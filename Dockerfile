@@ -8,6 +8,7 @@ COPY .mvn .mvn
 COPY pom.xml .
 COPY src src
 COPY libs libs
+COPY conf conf
 RUN ./mvnw install:install-file -Dfile=libs/id-log-${ID_LOG_VERSION}.jar -DgroupId=ee.ria.commons -DartifactId=id-log -Dversion=${ID_LOG_VERSION} -Dpackaging=jar -DgeneratePom=true
 
 # keytool 
