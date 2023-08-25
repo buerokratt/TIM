@@ -1,4 +1,4 @@
-FROM openjdk:11-jdk as build
+FROM eclipse-temurin:17 as build
 
 WORKDIR /workspace/app
 
