@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17 as build
+FROM eclipse-temurin:17 AS build
 
 WORKDIR /workspace/app
 

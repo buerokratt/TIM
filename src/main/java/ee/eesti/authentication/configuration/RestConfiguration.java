@@ -22,9 +22,9 @@ public class RestConfiguration implements WebMvcConfigurer {
     @Value("${userIPLoggingPrefix:from ip}")
     private String loggingPrefix;
     @Value("${userIPHeaderName:x-forwarded-for}")
-    private final String headerName = "";
+    private final static String headerName = "";
     @Value("${userIPLoggingMDCkey:userIP}")
-    private final String key = "userIP";
+    private final static String key = "userIP";
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

@@ -497,7 +497,7 @@ public class JwtController {
 
     private boolean isBlackListable(Cookie c) {
         for (String cookieName : cookiesToBlacklist) {
-            if (c.getName().trim().toLowerCase().equals(cookieName.trim().toLowerCase())) {
+            if (c.getName().trim().equalsIgnoreCase(cookieName.trim())) {
                 return true;
             }
         }
