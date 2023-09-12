@@ -20,17 +20,12 @@ import java.util.UUID;
 @Data
 public class JwtTokenInfo extends GenericJwtTokenInfo {
 
-//    @Column(name = "session_id", length = 36, nullable = false)
-//    private String legacySessionId;
-
     public JwtTokenInfo() {
     }
 
     public JwtTokenInfo(UUID jwtUuid, Timestamp expiredDate, Timestamp issuedDate, boolean blacklisted, Timestamp blacklistedDate
-//            , String legacySessionId
     ) {
         super(jwtUuid, expiredDate, issuedDate, blacklisted, blacklistedDate);
-//        this.legacySessionId = legacySessionId;
     }
 
 }

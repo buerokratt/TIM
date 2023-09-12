@@ -35,7 +35,6 @@ public class PortaalDao {
 	 * @param sessionId session id
 	 * @param personalCode users personal code
 	 */
-	//pwa.bg_login(rec.sess_id::varchar,isik.isikukood, 'EST');
 	public void executeBgLogin(String sessionId, String personalCode) {
 		String queryString = "select pwa.bg_login(?, ?, ?);";
 		Query query = entityManager.createNativeQuery(queryString);
