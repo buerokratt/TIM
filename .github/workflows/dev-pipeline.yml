@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - dev
+    paths:
+      - 'README.md'
 
 jobs:
   deploy-dev:
