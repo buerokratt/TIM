@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - dev
+    paths:
+      - 'README.md'
 
 jobs:
-  deploy-dev-test:
+  deploy-dev:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'  # Only run for the 'feature' branch
 

@@ -2,30 +2,40 @@ name: Build and publish TIM
 
 on:
   push:
-    branches: [ main ]
-    paths-ignore:
-     - '**.md'
+    branches: [ dev ]
+    paths:
+      - '.env'
 
 jobs:
   PackageDeploy:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
-    - name: Docker Setup BuildX
-      uses: docker/setup-buildx-action@v2
+      - name: Docker Setup BuildX
+        uses: docker/setup-buildx-action@v2
 
-    - name: Set image tag
-      run: |
-        LOWER_CASE_GITHUB_REPOSITORY=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')
-        echo "DOCKER_TAG_CUSTOM=ghcr.io/${LOWER_CASE_GITHUB_REPOSITORY}:${beta-2.0.$(date +'%y%m%d%H%M%S')}" >> $GITHUB_ENV
-    - name: Docker Build
-      run: docker image build --tag $DOCKER_TAG_CUSTOM .
+      - name: Load environment variables and set them
+        run: |
+          if [ -f .env ]; then
+            export $(cat .env | grep -v '^#' | xargs)
+          fi
+          echo "RELEASE=$RELEASE" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD=$BUILD" >> $GITHUB_ENV
+          echo "FIX=$FIX" >> $GITHUB_ENV
+      - name: Set repo
+        run: |
+           LOWER_CASE_GITHUB_REPOSITORY=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')
+           echo "DOCKER_TAG_CUSTOM=ghcr.io/${LOWER_CASE_GITHUB_REPOSITORY}:$RELEASE-$VERSION.$BUILD.$FIX" >> $GITHUB_ENV
+           echo "$GITHUB_ENV"
+      - name: Docker Build
+        run: docker image build -f Dockerfile.dev --tag $DOCKER_TAG_CUSTOM .
 
+      - name: Log in to GitHub container registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 
-    - name: Log in to GitHub container registry
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Push Docker image to ghcr
+        run: docker push $DOCKER_TAG_CUSTOM
 
-    - name: Push Docker image to ghcr
-      run: docker push $DOCKER_TAG_CUSTOM
