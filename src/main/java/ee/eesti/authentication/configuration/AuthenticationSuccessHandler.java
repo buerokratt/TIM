@@ -99,50 +99,19 @@ public class AuthenticationSuccessHandler extends SavedRequestAwareAuthenticatio
         }
         userInfo.setAuthMethod(amr);
 
-        // Save the session entity to database and retrieve the corresponding cookie and add it to response
-        ChannelType channelType = ChannelType.getByAmr(amr);
-
-        if (channelType == null) {
-            log.warn("unmapped channel type detected: {},  Please check the logs for more details", amr);
-            channelType = ChannelType.DEFAULT;
-        }
-
-//        String legacySessionIdValue = DEFAULT_LEGACY_SESSION_ID_VALUE;
-        //creates legacy session for estonian personal codes only
-//        if (userInfo.isHasEstonianPersonalCode()) {
-//
-//            Cookie legacySessionCookie = jwtUtils.getLegacySessionCookie(
-//                    request,
-//                    sessionsService.openLegacyPortalLoginSession(
-//                            request,
-//                            userInfo,
-//                            channelType,
-//                            profileAttributes.getAsString("mobile_number")),
-//                    true);
-//            response.addCookie(legacySessionCookie);
-//            legacySessionIdValue = legacySessionCookie.getValue();
-//        }
-
         UUID jwtTokenId = UUID.randomUUID();
         SignedJWT signedJWT = jwtUtils.createSignedJwt(jwtTokenId, userInfo);
         jwtTokenInfoService.createJwtTokenInfo(
                 jwtTokenId,
                     UUID.randomUUID().toString(),
-//                legacySessionIdValue,
                 new Timestamp(userInfo.getLoginExpireDate().getTime()));
 
-//        boolean redirectToLegacy = request.getSession(false).getAttribute(LEGACY) != null;
-        //write JWT as cookie
         response.addCookie(jwtUtils.getJwtCookie(signedJWT));
 
         if (session.getAttribute(CALLBACK_URL) != null) {
             log.debug("redirecting back callback_url {}", session.getAttribute(CALLBACK_URL));
             response.sendRedirect((String) session.getAttribute(CALLBACK_URL));
         }
-//        else if (redirectToLegacy) {
-//            log.debug("redirecting back to legacy portal");
-//            response.sendRedirect(legacyPortalIntegrationConfig.getLegacyUrl());
-//        }
         else {
             log.debug("no redirect URL is found, returning JWT token instead");
             response.getWriter().write(signedJWT.serialize());

@@ -106,7 +106,7 @@ public class SessionsService {
      * @return new UUID, similar to  java.util UUID with the "-" characters removed
      */
     public static String createSessionId() {
-        return UUID.randomUUID().toString().toLowerCase().replaceAll("-", "");
+        return UUID.randomUUID().toString().toLowerCase().replace("-", "");
     }
 
 
@@ -155,7 +155,7 @@ public class SessionsService {
                     .filter(cookie ->
                             config.getSessionCookieName().equals(cookie.getName()))
                     .map(Cookie::getValue)
-                    .collect(Collectors.toList());
+                    .toList();
 
             // Search for the active cookie using database query
             if (!sessionIds.isEmpty()) {
