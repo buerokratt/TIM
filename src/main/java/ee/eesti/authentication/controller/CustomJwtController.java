@@ -99,7 +99,10 @@ public class CustomJwtController {
 
         response.addCookie(cookie);
 
-        return ResponseEntity.ok(signedJWT.serialize());
+        Map<String, Object> resultingJwtToken = new HashMap<>();
+        resultingJwtToken.put("token", signedJWT.serialize());
+
+        return ResponseEntity.ok(resultingJwtToken);
     }
 
     private SignedJWT getCustomJwtSigned(CustomJwtTokenRequest request) {
