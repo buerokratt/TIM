@@ -1,5 +1,5 @@
-ARG tomcat_version=tomcat:9.0.62-jdk11-openjdk-slim
-FROM openjdk:11-jdk as build
+ARG tomcat_version=tomcat:8-jdk17-temurin
+FROM eclipse-temurin:17 AS build
 
 WORKDIR /workspace/app
 
