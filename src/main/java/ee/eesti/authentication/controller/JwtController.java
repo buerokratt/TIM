@@ -431,11 +431,11 @@ public class JwtController {
     }
 
     private void removeCookie(HttpServletResponse response, Cookie c, String domain, String path) {
-        Cookie cookie = new Cookie(c.getName(), null);
-        cookie.setDomain(domain.replaceAll("[\n\r]+"," "));
+        Cookie cookie = new Cookie(JwtUtils.removeNewlines(c.getName()), null);
+        cookie.setDomain(JwtUtils.removeNewlines(domain));
         cookie.setMaxAge(0);
         cookie.setSecure(c.getSecure());
-        cookie.setPath(path.replaceAll("[\n\r]+"," "));
+        cookie.setPath(JwtUtils.removeNewlines(path));
         response.addCookie(cookie);
     }
 

@@ -149,12 +149,12 @@ public class JwtUtils {
     public Cookie getLegacySessionCookie(HttpServletRequest request, SessionsEntity sessionsEntity, boolean alwaysCreateCookie) {
 
         Supplier<Cookie> cookieSupplier = () -> {
-            Cookie sessionCookie = new Cookie(legacyPortalIntegrationConfig.getSessionCookieName(),
-                    sessionsEntity.getSessionId().replaceAll("[\n\r]+"," "));
+            Cookie sessionCookie = new Cookie(removeNewlines(legacyPortalIntegrationConfig.getSessionCookieName()),
+                    removeNewlines(sessionsEntity.getSessionId()));
             sessionCookie.setHttpOnly(true);
             sessionCookie.setSecure(secureCookie);
             sessionCookie.setPath("/");
-            sessionCookie.setDomain(legacyPortalIntegrationConfig.getSessionCookieDomain());
+            sessionCookie.setDomain(removeNewlines(legacyPortalIntegrationConfig.getSessionCookieDomain()));
             return sessionCookie;
         };
 
@@ -268,5 +268,8 @@ public class JwtUtils {
         return (RSAKey) jwkSet.getKeyByKeyId(keyAlias);
     }
 
+    public static String removeNewlines(String in) {
+        return in.replaceAll("[\n\r]+"," ");
+    }
 
 }
