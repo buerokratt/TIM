@@ -63,7 +63,7 @@ class JwtUtilsTest extends AbstractSpringBasedTest {
         SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256),
                 new JWTClaimsSet.Builder()
                         .jwtID(UUID.randomUUID().toString())
-                        .issuer(jwtSignatureConfig.getIssuer())
+                        .issuer(jwtUtils.getFirstIssuer())
                         .issueTime(issueDate)
                         .expirationTime(expirationDate)
                         .subject(userInfo.getPersonalCode())

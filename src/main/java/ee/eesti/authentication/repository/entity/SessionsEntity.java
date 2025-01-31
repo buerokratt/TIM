@@ -2,15 +2,15 @@ package ee.eesti.authentication.repository.entity;
 
 import lombok.Data;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
  * Entity containing session's info.
  * Entity is associated with "sessions" table.
  */
-@NamedQueries({@NamedQuery(name = "SessionsEntity.isSessionExists",
-        query = "SELECT count(*) > 1 FROM SessionsEntity s WHERE s.sessionId=:sessionId"),})
+@NamedQuery(name = "SessionsEntity.isSessionExists",
+        query = "SELECT count(*) > 1 FROM SessionsEntity s WHERE s.sessionId=:sessionId")
 @Entity
 @Table(schema = "pwa", name = "sessions")
 @SequenceGenerator(name = "sessions_sess_id_seq",

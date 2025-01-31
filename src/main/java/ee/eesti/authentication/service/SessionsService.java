@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import rig.commons.aop.Timed;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -106,7 +106,7 @@ public class SessionsService {
      * @return new UUID, similar to  java.util UUID with the "-" characters removed
      */
     public static String createSessionId() {
-        return UUID.randomUUID().toString().toLowerCase().replaceAll("-", "");
+        return UUID.randomUUID().toString().toLowerCase().replace("-", "");
     }
 
 
@@ -155,7 +155,7 @@ public class SessionsService {
                     .filter(cookie ->
                             config.getSessionCookieName().equals(cookie.getName()))
                     .map(Cookie::getValue)
-                    .collect(Collectors.toList());
+                    .toList();
 
             // Search for the active cookie using database query
             if (!sessionIds.isEmpty()) {

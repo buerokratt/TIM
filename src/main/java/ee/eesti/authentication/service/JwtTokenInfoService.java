@@ -34,7 +34,6 @@ public class JwtTokenInfoService {
 		try {
 
 			JwtTokenInfo jwtTokenInfo = new JwtTokenInfo();
-//			jwtTokenInfo.setLegacySessionId(sessionId);
 			jwtTokenInfo.setExpiredDate(expiredDate);
 			jwtTokenInfo.setJwtUuid(jwtTokenUuid);
 

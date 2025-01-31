@@ -3,9 +3,9 @@ package ee.eesti.authentication.dao;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 
 /**
  * This class helps to perform queries related to portal db
@@ -35,7 +35,6 @@ public class PortaalDao {
 	 * @param sessionId session id
 	 * @param personalCode users personal code
 	 */
-	//pwa.bg_login(rec.sess_id::varchar,isik.isikukood, 'EST');
 	public void executeBgLogin(String sessionId, String personalCode) {
 		String queryString = "select pwa.bg_login(?, ?, ?);";
 		Query query = entityManager.createNativeQuery(queryString);

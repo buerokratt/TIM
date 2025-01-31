@@ -39,10 +39,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import javax.annotation.PostConstruct;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
@@ -266,8 +266,6 @@ public class JwtController {
             if (isValidChangeRole(roleChangePersonalCode, request.getCookies())) {
                 userInfoFromJwt.setPersonalCode(roleChangePersonalCode);
             }
-
-//            return new ResponseEntity<>(extendSessionObtainedFromJwt(oldJwtId, userInfoFromJwt, request, response), HttpStatus.OK);
         }
 
         return emptyOkResponse;
@@ -323,8 +321,6 @@ public class JwtController {
                 log.error("exception in blacklisting old token before extension session", e);
                 throw new RuntimeException(e);
             }
-
-//            extendSessionObtainedFromJwt(oldJwtId, userInfoFromJwt, request, response);
         }
 
         if (legacySessionCookie != null && legacySessionCookie.getValue() != null &&
@@ -362,7 +358,6 @@ public class JwtController {
         SignedJWT signedJwt = jwtUtils.createSignedJwt(jwtTokenId, userInfo);
         jwtTokenInfoService.createJwtTokenInfo(jwtTokenId, sessionEntity.getSessionId(), new Timestamp(userInfo.getLoginExpireDate().getTime()));
 
-
         Cookie legacySessionCookie = jwtUtils.getLegacySessionCookie(request, sessionEntity, true);
         response.addCookie(legacySessionCookie);
 
@@ -376,55 +371,6 @@ public class JwtController {
     private String convertChannelToAmr(String channel) {
       return Optional.ofNullable(ChannelType.getByChannel(channel)).orElse(ChannelType.DEFAULT).getAmr();
     }
-
-//    private String extendSessionObtainedFromJwt(String oldJwtId, UserInfo userInfoFromJwt, HttpServletRequest request, HttpServletResponse response) {
-//
-//        userInfoFromJwt.setLoginExpireDate(DateUtils.addMinutes(new Date(), legacyPortalIntegrationConfig.getSessionTimeoutMinutes()));
-//
-//        UUID jwtTokenId = UUID.randomUUID();
-//        SignedJWT signedJwt = jwtUtils.createSignedJwt(jwtTokenId, userInfoFromJwt);
-//
-//
-//        JwtTokenInfo jwtTokenInfo = jwtTokenInfoRepository
-//                .findById(UUID.fromString(oldJwtId)).orElse(null);
-//
-//        String legacySessionId = AuthenticationSuccessHandler.DEFAULT_LEGACY_SESSION_ID_VALUE;
-//
-//        if (userInfoFromJwt.isHasEstonianPersonalCode()) {
-//            SessionsEntity sessionEntityToExtend = null;
-//            if (jwtTokenInfo != null && jwtTokenInfo.getLegacySessionId() != null) {
-//                sessionEntityToExtend = sessionsRepository.findBySessionId(jwtTokenInfo.getLegacySessionId()).orElse(null);
-//            }
-//
-//            if (sessionEntityToExtend != null) {
-//                sessionEntityToExtend.setLastModified(LocalDateTime.now());
-//                sessionEntityToExtend.setValidTo(LocalDateTime.ofInstant(Instant.ofEpochMilli(userInfoFromJwt.getLoginExpireDate().getTime()), ZoneId.systemDefault()));
-//
-//                sessionsRepository.saveAndFlush(sessionEntityToExtend);
-//
-//            } else {
-//                // existing sessionsEntity is not found
-//                // create unauthenticated session to legacy portal
-//                sessionEntityToExtend = sessionsService.openLegacyPortalLoginSession(request, userInfoFromJwt, ChannelType.AUTENTIMATA, null);
-//            }
-//
-//
-//            Cookie legacySessionCookie = jwtUtils.getLegacySessionCookie(request, sessionEntityToExtend, false);
-//            response.addCookie(legacySessionCookie);
-//            legacySessionId = sessionEntityToExtend.getSessionId();
-//        }
-//
-//        jwtTokenInfoService.createJwtTokenInfo(
-//                jwtTokenId,
-//                legacySessionId,
-//                new Timestamp(userInfoFromJwt.getLoginExpireDate().getTime()));
-//
-//
-//        response.addCookie(jwtUtils.getJwtCookie(signedJwt));
-//
-//        return signedJwt.serialize();
-//    }
-
 
     @ApiOperation(value = "Mark the session details as blacklisted", response = ResponseEntity.class)
     @ApiResponses(value = {
@@ -469,9 +415,7 @@ public class JwtController {
         } else if (jwtTokenId != null) {
             jwtTokenInfoOptional = jwtTokenInfoRepository.findById(UUID.fromString(jwtTokenId));
         }
-//        else {
-//            jwtTokenInfoOptional = jwtTokenInfoRepository.findByLegacySessionId(sessionId);
-//        }
+
         jwtTokenInfoOptional.ifPresent(this::blacklist);
 
         for (Cookie c : request.getCookies()) {
@@ -487,17 +431,17 @@ public class JwtController {
     }
 
     private void removeCookie(HttpServletResponse response, Cookie c, String domain, String path) {
-        Cookie cookie = new Cookie(c.getName(), null);
-        cookie.setDomain(domain);
+        Cookie cookie = new Cookie(JwtUtils.removeNewlines(c.getName()), null);
+        cookie.setDomain(JwtUtils.removeNewlines(domain));
         cookie.setMaxAge(0);
         cookie.setSecure(c.getSecure());
-        cookie.setPath(path);
+        cookie.setPath(JwtUtils.removeNewlines(path));
         response.addCookie(cookie);
     }
 
     private boolean isBlackListable(Cookie c) {
         for (String cookieName : cookiesToBlacklist) {
-            if (c.getName().trim().toLowerCase().equals(cookieName.trim().toLowerCase())) {
+            if (c.getName().trim().equalsIgnoreCase(cookieName.trim())) {
                 return true;
             }
         }
@@ -507,14 +451,6 @@ public class JwtController {
     private void blacklist(JwtTokenInfo jwtTokenInfo) {
         jwtTokenInfo.setBlacklisted(true);
         jwtTokenInfo.setBlacklistedDate(new Timestamp(System.currentTimeMillis()));
-
-//        sessionsRepository.findBySessionId(jwtTokenInfo.getLegacySessionId()).ifPresent(
-//                sessionsEntity -> {
-//                    LocalDateTime now = LocalDateTime.now();
-//                    sessionsEntity.setLastModified(now);
-//                    sessionsEntity.setValidTo(now);
-//                    sessionsRepository.saveAndFlush(sessionsEntity);
-//                });
 
         jwtTokenInfoRepository.save(jwtTokenInfo);
         log.debug("jwtTokenInfo blacklisted ({})", jwtTokenInfo);

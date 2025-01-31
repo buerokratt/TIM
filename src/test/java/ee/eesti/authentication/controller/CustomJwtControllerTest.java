@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import javax.servlet.http.Cookie;
+import jakarta.servlet.http.Cookie;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;

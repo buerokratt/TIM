@@ -1,12 +1,11 @@
 package ee.eesti.authentication.configuration;
 
-import com.nimbusds.jose.shaded.json.JSONArray;
-import com.nimbusds.jose.shaded.json.JSONObject;
+import com.nimbusds.jose.shaded.gson.internal.LinkedTreeMap;
+
 import com.nimbusds.jwt.SignedJWT;
 import ee.eesti.authentication.configuration.jwt.JwtUtils;
 import ee.eesti.authentication.constant.LegacyPortalIntegrationConfig;
 import ee.eesti.authentication.domain.UserInfo;
-import ee.eesti.authentication.enums.ChannelType;
 import ee.eesti.authentication.service.JwtTokenInfoService;
 import ee.eesti.authentication.service.SessionsService;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +16,9 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -74,13 +73,13 @@ public class AuthenticationSuccessHandler extends SavedRequestAwareAuthenticatio
 
         UserInfo userInfo = new UserInfo();
         String personalCode = (String) casted.getPrincipal().getAttributes().get("sub");
-        JSONObject profileAttributes = (JSONObject) casted.getPrincipal().getAttributes().get("profile_attributes");
+        LinkedTreeMap profileAttributes = (LinkedTreeMap) casted.getPrincipal().getAttributes().get("profile_attributes");
 
         userInfo.setPersonalCode(personalCode);
         userInfo.setAuthenticatedAs(personalCode);
         userInfo.setHash(getUniqueRandomHash());
-        userInfo.setFirstName(profileAttributes.getAsString("given_name"));
-        userInfo.setLastName(profileAttributes.getAsString("family_name"));
+        userInfo.setFirstName((String) profileAttributes.get("given_name"));
+        userInfo.setLastName((String) profileAttributes.get("family_name"));
         userInfo.setLoggedInDate(new Date());
         userInfo.setLoginExpireDate(
                 DateUtils.addMinutes(
@@ -99,50 +98,19 @@ public class AuthenticationSuccessHandler extends SavedRequestAwareAuthenticatio
         }
         userInfo.setAuthMethod(amr);
 
-        // Save the session entity to database and retrieve the corresponding cookie and add it to response
-        ChannelType channelType = ChannelType.getByAmr(amr);
-
-        if (channelType == null) {
-            log.warn("unmapped channel type detected: {},  Please check the logs for more details", amr);
-            channelType = ChannelType.DEFAULT;
-        }
-
-//        String legacySessionIdValue = DEFAULT_LEGACY_SESSION_ID_VALUE;
-        //creates legacy session for estonian personal codes only
-//        if (userInfo.isHasEstonianPersonalCode()) {
-//
-//            Cookie legacySessionCookie = jwtUtils.getLegacySessionCookie(
-//                    request,
-//                    sessionsService.openLegacyPortalLoginSession(
-//                            request,
-//                            userInfo,
-//                            channelType,
-//                            profileAttributes.getAsString("mobile_number")),
-//                    true);
-//            response.addCookie(legacySessionCookie);
-//            legacySessionIdValue = legacySessionCookie.getValue();
-//        }
-
         UUID jwtTokenId = UUID.randomUUID();
         SignedJWT signedJWT = jwtUtils.createSignedJwt(jwtTokenId, userInfo);
         jwtTokenInfoService.createJwtTokenInfo(
                 jwtTokenId,
                     UUID.randomUUID().toString(),
-//                legacySessionIdValue,
                 new Timestamp(userInfo.getLoginExpireDate().getTime()));
 
-//        boolean redirectToLegacy = request.getSession(false).getAttribute(LEGACY) != null;
-        //write JWT as cookie
         response.addCookie(jwtUtils.getJwtCookie(signedJWT));
 
         if (session.getAttribute(CALLBACK_URL) != null) {
             log.debug("redirecting back callback_url {}", session.getAttribute(CALLBACK_URL));
             response.sendRedirect((String) session.getAttribute(CALLBACK_URL));
         }
-//        else if (redirectToLegacy) {
-//            log.debug("redirecting back to legacy portal");
-//            response.sendRedirect(legacyPortalIntegrationConfig.getLegacyUrl());
-//        }
         else {
             log.debug("no redirect URL is found, returning JWT token instead");
             response.getWriter().write(signedJWT.serialize());

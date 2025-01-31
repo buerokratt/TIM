@@ -5,7 +5,7 @@ import ee.eesti.authentication.repository.entity.JwtTokenInfo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Optional;

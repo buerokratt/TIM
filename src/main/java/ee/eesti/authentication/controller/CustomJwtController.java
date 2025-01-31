@@ -14,10 +14,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rig.commons.aop.Timed;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.*;
@@ -92,14 +92,17 @@ public class CustomJwtController {
             return emptyOkResponse;
         }
 
-        Cookie cookie = new Cookie(request.getJwtName(), signedJWT.serialize());
+        Cookie cookie = new Cookie(JwtUtils.removeNewlines(request.getJwtName()), JwtUtils.removeNewlines(signedJWT.serialize()));
         cookie.setHttpOnly(true);
         cookie.setSecure(secureCookie);
-        cookie.setDomain(legacyPortalIntegrationConfig.getSessionCookieDomain());
+        cookie.setDomain(JwtUtils.removeNewlines(legacyPortalIntegrationConfig.getSessionCookieDomain()));
 
         response.addCookie(cookie);
 
-        return ResponseEntity.ok(signedJWT.serialize());
+        Map<String, Object> resultingJwtToken = new HashMap<>();
+        resultingJwtToken.put("token", signedJWT.serialize());
+
+        return ResponseEntity.ok(resultingJwtToken);
     }
 
     private SignedJWT getCustomJwtSigned(CustomJwtTokenRequest request) {

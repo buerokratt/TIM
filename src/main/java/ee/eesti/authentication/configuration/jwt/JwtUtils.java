@@ -17,10 +17,11 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -96,7 +97,7 @@ public class JwtUtils {
 
         JWTClaimsSet.Builder claimsSetBuilder = new JWTClaimsSet.Builder()
                 .jwtID(jwtTokenId.toString())
-                .issuer(jwtSignatureConfig.getIssuer())
+                .issuer(getFirstIssuer())
                 .issueTime(issueDate)
                 .expirationTime(expirationDate)
                 .subject(subject);
@@ -148,10 +149,12 @@ public class JwtUtils {
     public Cookie getLegacySessionCookie(HttpServletRequest request, SessionsEntity sessionsEntity, boolean alwaysCreateCookie) {
 
         Supplier<Cookie> cookieSupplier = () -> {
-            Cookie sessionCookie = new Cookie(legacyPortalIntegrationConfig.getSessionCookieName(), sessionsEntity.getSessionId());
+            Cookie sessionCookie = new Cookie(removeNewlines(legacyPortalIntegrationConfig.getSessionCookieName()),
+                    removeNewlines(sessionsEntity.getSessionId()));
+            sessionCookie.setHttpOnly(true);
             sessionCookie.setSecure(secureCookie);
             sessionCookie.setPath("/");
-            sessionCookie.setDomain(legacyPortalIntegrationConfig.getSessionCookieDomain());
+            sessionCookie.setDomain(removeNewlines(legacyPortalIntegrationConfig.getSessionCookieDomain()));
             return sessionCookie;
         };
 
@@ -226,7 +229,7 @@ public class JwtUtils {
             if (signedJWT.getJWTClaimsSet().getJWTID() == null
                     || signedJWT.getJWTClaimsSet().getExpirationTime() == null
                     || signedJWT.getJWTClaimsSet().getIssueTime() == null
-                    || !jwtSignatureConfig.getIssuer().equals(signedJWT.getJWTClaimsSet().getIssuer())
+                    || !containsIssuer(signedJWT.getJWTClaimsSet().getIssuer())
                     ) {
                 log.warn("some attributes of the JWT token (id:{}) are invalid", signedJWT.getJWTClaimsSet().getJWTID());
                 valid = false;
@@ -265,5 +268,16 @@ public class JwtUtils {
         return (RSAKey) jwkSet.getKeyByKeyId(keyAlias);
     }
 
+    public static String removeNewlines(String in) {
+        return in.replaceAll("[\n\r]+"," ");
+    }
+
+    public String getFirstIssuer() {
+        return jwtSignatureConfig.getIssuer().split(",")[0];
+    }
+
+    public boolean containsIssuer(String tokenIssuer) {
+        return Set.of(jwtSignatureConfig.getIssuer().split(",")).contains(tokenIssuer);
+    }
 
 }

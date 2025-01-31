@@ -10,7 +10,5 @@ import java.util.UUID;
 @Repository
 public interface JwtTokenInfoRepository extends JpaRepository<JwtTokenInfo, UUID> {
 
-//	Optional<JwtTokenInfo> findByLegacySessionId(String legacySessionId);
-
 	Optional<JwtTokenInfo> findByJwtUuidAndBlacklistedIsTrue(UUID uuid);
 }

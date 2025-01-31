@@ -42,7 +42,7 @@ public class OauthConfiguration {
                         .clientName(clientName)
                         .clientSecret(clientSecret)
                         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                        .redirectUriTemplate(redirectUrlTemplate)
+                        .redirectUri(redirectUrlTemplate)
                         .tokenUri(tokenUri)
                         .jwkSetUri(jwkSetUri)
                         .scope(defaultString(scope).split("[\\s]+"))
