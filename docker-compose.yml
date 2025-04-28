@@ -10,6 +10,9 @@ services:
       - tim
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    environment:
+      - jwt-integration.signature.key-store-password=defaultpassword
+      
 
 networks:
   tim:
