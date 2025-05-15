@@ -2,7 +2,7 @@ name: Build and publish TIM
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ add-configurable-samesite ]
     paths:
       - '.env'
 
