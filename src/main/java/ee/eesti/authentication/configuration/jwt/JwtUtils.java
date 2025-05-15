@@ -43,6 +43,9 @@ public class JwtUtils {
     @Value("${jwt-integration.signature.secureCookie:true}")
     private boolean secureCookie;
 
+    @Value("${security.cookie.same-site:None}")
+    private String cookieSameSite;
+
     public JwtUtils(LegacyPortalIntegrationConfig legacyPortalIntegrationConfig,
                     JwtSignatureConfig jwtSignatureConfig,
                     JWSSigner rsassaSigner,
@@ -130,6 +133,7 @@ public class JwtUtils {
         jwtCookie.setSecure(secureCookie);
         jwtCookie.setHttpOnly(true);
         jwtCookie.setPath("/");
+        jwtCookie.setAttribute("SameSite", cookieSameSite);
         return jwtCookie;
     }
 
