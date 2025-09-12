@@ -86,16 +86,24 @@ public class SecurityConfiguration {
                             "/swagger-ui.html",
                             "/webjars/**",
                             HeartBeatController.URL)
-                        .permitAll()
-                        .requestMatchers("/cancel-auth")
-                        .permitAll()
-                        .requestMatchers("/jwt/custom-jwt-generate",
-                            "/jwt/custom-jwt-userinfo",
-                            "/jwt/change-jwt-role")
-                        .access(getAllowedIps())
-                        .requestMatchers("/jwt/**")
-                        .permitAll()
-                        .requestMatchers("/**").authenticated())
+                            .permitAll()
+
+                            .requestMatchers("/cancel-auth")
+                            .permitAll()
+
+                            .requestMatchers("/jwt/custom-jwt-generate",
+                                "/jwt/custom-jwt-userinfo",
+                                "/jwt/change-jwt-role")
+                            .access(getAllowedIps())
+
+                            .requestMatchers("/jwt/**")
+                            .permitAll()
+
+                            .requestMatchers("/sessionkey/**")
+                            .permitAll()
+
+                            .requestMatchers("/**")
+                            .authenticated())
                     .logout(logoutUrl ->
                         logoutUrl.logoutUrl("/logout")
                             .logoutSuccessUrl(frontPageRedirectUrl))

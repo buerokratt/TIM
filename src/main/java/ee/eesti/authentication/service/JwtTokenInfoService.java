@@ -1,6 +1,8 @@
 package ee.eesti.authentication.service;
 
+import ee.eesti.authentication.repository.CustomJwtTokenInfoRepository;
 import ee.eesti.authentication.repository.JwtTokenInfoRepository;
+import ee.eesti.authentication.repository.entity.CustomJwtTokenInfo;
 import ee.eesti.authentication.repository.entity.JwtTokenInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,9 +20,13 @@ import java.util.UUID;
 public class JwtTokenInfoService {
 
 	private final JwtTokenInfoRepository jwtTokenInfoRepository;
+	private final CustomJwtTokenInfoRepository customJwtTokenInfoRepository;
 
-	public JwtTokenInfoService(JwtTokenInfoRepository jwtTokenInfoRepository) {
+
+	public JwtTokenInfoService(JwtTokenInfoRepository jwtTokenInfoRepository,
+							   CustomJwtTokenInfoRepository customJwtTokenInfoRepository) {
 		this.jwtTokenInfoRepository = jwtTokenInfoRepository;
+		this.customJwtTokenInfoRepository = customJwtTokenInfoRepository;
 	}
 
 	/**
@@ -44,4 +50,27 @@ public class JwtTokenInfoService {
 			throw new IllegalStateException(e);
 		}
 	}
+
+
+	public void blacklist(JwtTokenInfo jwtTokenInfo) {
+
+		jwtTokenInfo.setBlacklisted(true);
+		jwtTokenInfo.setBlacklistedDate(new Timestamp(System.currentTimeMillis()));
+
+		jwtTokenInfoRepository.save(jwtTokenInfo);
+		jwtTokenInfoRepository.flush();
+		log.debug("jwtTokenInfo blacklisted ({})", jwtTokenInfo);
+	}
+
+
+	public void blacklist(CustomJwtTokenInfo jwtTokenInfo) {
+
+		jwtTokenInfo.setBlacklisted(true);
+		jwtTokenInfo.setBlacklistedDate(new Timestamp(System.currentTimeMillis()));
+
+		customJwtTokenInfoRepository.save(jwtTokenInfo);
+		customJwtTokenInfoRepository.flush();
+		log.debug("customJwtTokenInfo blacklisted ({})", jwtTokenInfo);
+	}
+
 }
