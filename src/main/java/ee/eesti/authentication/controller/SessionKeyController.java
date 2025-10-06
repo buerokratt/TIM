@@ -92,4 +92,12 @@ public class SessionKeyController {
         }
     }
 
+    @PostMapping("/delete")
+    public ResponseEntity<?> deleteSessionKey(@RequestBody SessionKeyRequest request, HttpServletResponse response) {
+        if (allowList.delete(request.sessionKey))
+            return emptyOkResponse;
+        else
+            return emptyNotFoundResponse;
+    }
+
 }

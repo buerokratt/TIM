@@ -85,4 +85,13 @@ public class WhiteListService {
         return entity.isPresent();
     }
 
+    public boolean delete(String sessionKey) {
+        Optional<JwtWhitelistEntity> session = repository.findByJwtHash(sessionKey);
+
+        if (session.isEmpty())
+            return false;
+
+        blacklist(session.get().getJwtHash());
+        return true;
+    }
 }
