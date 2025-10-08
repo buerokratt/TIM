@@ -92,6 +92,8 @@ public class WhiteListService {
             return false;
 
         blacklist(session.get().getJwtHash());
+        repository.delete(session.get());
+
         return true;
     }
 }
