@@ -79,7 +79,7 @@ public class CustomSessionAttributeSecurityFilter extends GenericFilterBean {
 
 	private boolean callBackUrlAllowed(String url) {
 		for (String wlUrl : authSuccessRedirectUrlWhitelist) {
-			if (url.trim().equals(wlUrl.trim())) {
+			if (url.trim().matches("^" + wlUrl.trim() + "$")) {
 				return true;
 			}
 		}
