@@ -13,6 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * this filter is set up to add session attributes depending on information from request
@@ -54,14 +56,14 @@ public class CustomSessionAttributeSecurityFilter extends GenericFilterBean {
         String referer = ((HttpServletRequest) request).getHeader("Referer");
 
 		if (request.getParameter(CALLBACK_URL) != null) {
-
-			if(!callBackUrlAllowed(request.getParameter(CALLBACK_URL))) {
-				logger.error("Callback url " + request.getParameter(CALLBACK_URL) + " is not in the allowed list");
+			String callback = URLDecoder.decode(request.getParameter(CALLBACK_URL), StandardCharsets.UTF_8);
+			if(!callBackUrlAllowed(callback)) {
+				logger.error("Callback url " + callback + " is not in the allowed list");
 				res.sendError(HttpServletResponse.SC_BAD_REQUEST, "Callback url is not in allowed list");
 				return;
 			}
 
-			session.setAttribute(CALLBACK_URL, request.getParameter(CALLBACK_URL));
+			session.setAttribute(CALLBACK_URL, callback);
 		} else if (session.getAttribute(LEGACY) == null && referer != null && referer.contains(config.getLegacyPortalRefererMarker())) {
             session.setAttribute(LEGACY, true);
         }

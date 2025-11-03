@@ -75,7 +75,9 @@ public class SessionKeyController {
     @PostMapping("/keysString")
     public ResponseEntity<?> checkSessionKeysString(@RequestBody String requestString) {
 
-        List<String> request = Arrays.stream(requestString.split(","))
+        String[] parts = requestString.split(":");
+        String newKeys = parts[1].replace("}", "").replaceAll("\"","");
+        List<String> request = Arrays.stream(newKeys.split(","))
                         .map(String::trim)
                                 .collect(Collectors.toList());
 
