@@ -128,7 +128,7 @@ class JwtControllerTest extends AbstractSpringBasedTest {
 
         mvc.perform(
                         get("/jwt/userinfo")
-                                .cookie(new Cookie(jwtSignatureConfig.getCookieName(), getJwtTokenString(issueTime, expirationDate, jwtSignatureConfig.getIssuer(), UUID.randomUUID().toString(), claimSetToAdd, personalCode))))
+                                .cookie(new Cookie(jwtSignatureConfig.getCookieName(), getJwtTokenString(issueTime, expirationDate, jwtUtils.getFirstIssuer(), UUID.randomUUID().toString(), claimSetToAdd, personalCode))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("personalCode", is(personalCode)))
                 .andExpect(jsonPath("firstName", is(firstName)))
@@ -161,7 +161,7 @@ class JwtControllerTest extends AbstractSpringBasedTest {
         //Valid Token
         mvc.perform(
                         post("/jwt/verify")
-                                .content(getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtSignatureConfig.getIssuer(), UUID.randomUUID().toString(), null, personalCode)))
+                                .content(getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), UUID.randomUUID().toString(), null, personalCode)))
                 .andExpect(status().isOk());
 
         //invalid token
@@ -173,7 +173,7 @@ class JwtControllerTest extends AbstractSpringBasedTest {
         //Expired token
         mvc.perform(
                         post("/jwt/verify")
-                                .content(getJwtTokenString(new Date(), new Date(), jwtSignatureConfig.getIssuer(), UUID.randomUUID().toString(), null, personalCode)))
+                                .content(getJwtTokenString(new Date(), new Date(), jwtUtils.getFirstIssuer(), UUID.randomUUID().toString(), null, personalCode)))
                 .andExpect(status().isBadRequest());
 
         //Invalid issuer

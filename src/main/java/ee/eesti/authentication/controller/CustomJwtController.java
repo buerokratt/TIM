@@ -7,6 +7,8 @@ import ee.eesti.authentication.constant.LegacyPortalIntegrationConfig;
 import ee.eesti.authentication.domain.CustomJwtTokenRequest;
 import ee.eesti.authentication.repository.CustomJwtTokenInfoRepository;
 import ee.eesti.authentication.repository.entity.CustomJwtTokenInfo;
+import ee.eesti.authentication.service.JwtTokenInfoService;
+import ee.eesti.authentication.service.WhiteListService;
 import io.swagger.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,12 +51,20 @@ public class CustomJwtController {
 
     private static final ResponseEntity<?> emptyOkResponse = ResponseEntity.ok().build();
 
+    private final WhiteListService allowList;
+
+    private final JwtTokenInfoService jwtService;
+
     public CustomJwtController(JwtUtils jwtUtils,
                                CustomJwtTokenInfoRepository customJwtTokenInfoRepository,
-                               LegacyPortalIntegrationConfig legacyPortalIntegrationConfig) {
+                               LegacyPortalIntegrationConfig legacyPortalIntegrationConfig,
+                               WhiteListService allowListService,
+                               JwtTokenInfoService jwtService) {
         this.jwtUtils = jwtUtils;
         this.customJwtTokenInfoRepository = customJwtTokenInfoRepository;
         this.legacyPortalIntegrationConfig = legacyPortalIntegrationConfig;
+        this.allowList = allowListService;
+        this.jwtService = jwtService;
     }
 
     /**
@@ -101,6 +111,9 @@ public class CustomJwtController {
 
         Map<String, Object> resultingJwtToken = new HashMap<>();
         resultingJwtToken.put("token", signedJWT.serialize());
+
+        allowList.addSessionToAllowlist(customJwtTokenInfo.getJwtUuid().toString(),
+                customJwtTokenInfo.getExpiredDate());
 
         return ResponseEntity.ok(resultingJwtToken);
     }
@@ -179,7 +192,7 @@ public class CustomJwtController {
             if (!tokenToBlacklist.isPresent()) {
                 log.warn("token to be blacklisted not found JWT: {}", jwt.serialize());
             } else {
-                blacklist(tokenToBlacklist.get());
+                jwtService.blacklist(tokenToBlacklist.get());
             }
             return emptyOkResponse;
 
@@ -224,7 +237,7 @@ public class CustomJwtController {
                 return emptyOkResponse;
             }
 
-            blacklist(tokenToBlacklist.get());
+            jwtService.blacklist(tokenToBlacklist.get());
 
             Map<String, Object> transferredCustomClaims = new HashMap<>();
 
@@ -312,18 +325,6 @@ public class CustomJwtController {
 
     }
 
-
-    private void blacklist(CustomJwtTokenInfo customJwtTokenInfo) {
-
-        customJwtTokenInfo.setBlacklisted(true);
-        customJwtTokenInfo.setBlacklistedDate(new Timestamp(System.currentTimeMillis()));
-
-        customJwtTokenInfoRepository.save(customJwtTokenInfo);
-        customJwtTokenInfoRepository.flush();
-        log.debug("customJwtTokenInfo blacklisted ({})", customJwtTokenInfo);
-
-    }
-
     private Cookie getCustomJwtTokenFromRequest(@RequestBody String cookieName, HttpServletRequest httpServletRequest) {
         Cookie jwtCookie = null;
         if (httpServletRequest.getCookies() == null || httpServletRequest.getCookies().length == 0) {
@@ -337,5 +338,10 @@ public class CustomJwtController {
         }
         return jwtCookie;
     }
+
+    private void blacklistExpired() {
+
+    }
+
 
 }

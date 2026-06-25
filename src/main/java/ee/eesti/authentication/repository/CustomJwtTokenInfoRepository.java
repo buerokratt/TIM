@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface CustomJwtTokenInfoRepository extends JpaRepository<CustomJwtTokenInfo, UUID> {
 
     Optional<CustomJwtTokenInfo> findByJwtUuidAndBlacklistedIsTrue(UUID uuid);
+
+    Optional<CustomJwtTokenInfo> findByJwtUuid(UUID uuid);
 }

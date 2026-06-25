@@ -43,6 +43,9 @@ public class JwtUtils {
     @Value("${jwt-integration.signature.secureCookie:true}")
     private boolean secureCookie;
 
+    @Value("${security.cookie.same-site:None}")
+    private String cookieSameSite;
+
     public JwtUtils(LegacyPortalIntegrationConfig legacyPortalIntegrationConfig,
                     JwtSignatureConfig jwtSignatureConfig,
                     JWSSigner rsassaSigner,
@@ -97,7 +100,7 @@ public class JwtUtils {
 
         JWTClaimsSet.Builder claimsSetBuilder = new JWTClaimsSet.Builder()
                 .jwtID(jwtTokenId.toString())
-                .issuer(jwtSignatureConfig.getIssuer())
+                .issuer(getFirstIssuer())
                 .issueTime(issueDate)
                 .expirationTime(expirationDate)
                 .subject(subject);
@@ -130,6 +133,7 @@ public class JwtUtils {
         jwtCookie.setSecure(secureCookie);
         jwtCookie.setHttpOnly(true);
         jwtCookie.setPath("/");
+        jwtCookie.setAttribute("SameSite", cookieSameSite);
         return jwtCookie;
     }
 
@@ -229,7 +233,7 @@ public class JwtUtils {
             if (signedJWT.getJWTClaimsSet().getJWTID() == null
                     || signedJWT.getJWTClaimsSet().getExpirationTime() == null
                     || signedJWT.getJWTClaimsSet().getIssueTime() == null
-                    || !jwtSignatureConfig.getIssuer().equals(signedJWT.getJWTClaimsSet().getIssuer())
+                    || !containsIssuer(signedJWT.getJWTClaimsSet().getIssuer())
                     ) {
                 log.warn("some attributes of the JWT token (id:{}) are invalid", signedJWT.getJWTClaimsSet().getJWTID());
                 valid = false;
@@ -270,6 +274,14 @@ public class JwtUtils {
 
     public static String removeNewlines(String in) {
         return in.replaceAll("[\n\r]+"," ");
+    }
+
+    public String getFirstIssuer() {
+        return jwtSignatureConfig.getIssuer().split(",")[0];
+    }
+
+    public boolean containsIssuer(String tokenIssuer) {
+        return Set.of(jwtSignatureConfig.getIssuer().split(",")).contains(tokenIssuer);
     }
 
 }
