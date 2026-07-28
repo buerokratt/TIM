@@ -30,6 +30,7 @@ import jakarta.servlet.http.Cookie;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -205,80 +206,139 @@ class JwtControllerTest extends AbstractSpringBasedTest {
         return signedJWT.serialize();
     }
 
-//    @Test
-//    @Transactional
-//     void testBlacklistUsingJwtToken() throws Exception {
-//
-//        //blacklisting using cookie
-//
-//        JwtTokenInfo jwtTokenInfo = jwtTokenInfoService.createJwtTokenInfo(UUID.randomUUID(), "q6pzhtnlb0vppk2s1kj8jbz6rw003tvc3", new Timestamp(new Date().getTime() + 1000 * 60 * 30));
-//        UUID jwtToken = jwtTokenInfo.getJwtUuid();
-//        String tokenBlacklistedByUuid = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 10), jwtSignatureConfig.getIssuer(), jwtToken.toString(), null, "11223344556");
-//
-//
-//        //blacklisting using post method
-//        mvc.perform(
-//                post("/jwt/blacklist")
-//                        .cookie(
-//                                new Cookie(
-//                                        jwtSignatureConfig.getCookieName(),
-//                                        tokenBlacklistedByUuid)))
-//                .andExpect(status().isOk());
-//
-//        //same token should not pass verification aftrer blacklisting
-//        mvc.perform(post("/jwt/verify")
-//                .content(tokenBlacklistedByUuid))
-//                .andExpect(status().isBadRequest());
-//
-//
-//        jwtTokenInfo = jwtTokenInfoService.createJwtTokenInfo(DEFAULT_JWT_TOKEN, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
-//        jwtToken = jwtTokenInfo.getJwtUuid();
-//        tokenBlacklistedByUuid = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 10), jwtSignatureConfig.getIssuer(), jwtToken.toString(), null, "11223344556");
-//
-//        //blacklisting using post method
-//        mvc.perform(
-//                post("/jwt/blacklist")
-//                        .param("jwt", jwtToken.toString()))
-//                .andExpect(status().isOk());
-//
-//        //same token should not pass verification aftrer blacklisting
-//        mvc.perform(post("/jwt/verify")
-//                .content(tokenBlacklistedByUuid))
-//                .andExpect(status().isBadRequest());
-//
-//        UUID jwtTokenUuid = UUID.randomUUID();
-//
-//        jwtTokenInfo = jwtTokenInfoService.createJwtTokenInfo(jwtTokenUuid, DEFAULT_SESSION_ID_2, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
-//        sessionsRepository.save(
-//                createSessionsEntity(
-//                        jwtTokenInfo.getLegacySessionId(),
-//                        LocalDateTime.now().plusMinutes(42L),
-//                        LocalDateTime.now().plusMinutes(42L)));
-//
-//        String sessionId = jwtTokenInfo.getLegacySessionId();
-//
-//        mvc.perform(
-//                post("/jwt/blacklist")
-//                        .param("sessionId", sessionId)
-//                        .cookie(new Cookie("PHPSESSID", null)))
-//                .andExpect(status().isOk())
-//                .andExpect(cookie().maxAge(legacyPortalIntegrationConfig.getSessionCookieName(), 0));
-//
-//        //blacklisted legacy sessionId should have the validToDate in the past
-//
-//        SessionsEntity expiredSessionsEnity = sessionsRepository
-//                .findBySessionId(sessionId)
-//                .orElseThrow(IllegalArgumentException::new);
-//
-//        assertTrue(expiredSessionsEnity.getValidTo().isBefore(LocalDateTime.now()));
-//
-//        String tokenBlacklistedBySessionId = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 10), jwtSignatureConfig.getIssuer(), jwtTokenUuid.toString(), null, "11223344556");
-//
-//        //same token should not pass verification aftrer blacklisting
-//        mvc.perform(post("/jwt/verify")
-//                .content(tokenBlacklistedBySessionId))
-//                .andExpect(status().isBadRequest());
-//    }
+
+    @Test
+    void testBlacklistUsingJwtCookieMarksTokenAsBlacklistedAndRemovesCookie() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
+        String jwtTokenString = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), jwtId.toString(), null, "11223344551");
+
+        mvc.perform(post("/jwt/blacklist")
+                        .cookie(new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString)))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge(jwtSignatureConfig.getCookieName(), 0));
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(true));
+    }
+
+    @Test
+    void testBlacklistUsingJwtRequestParam() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
+
+        // a dummy cookie is required here: performBlacklist() iterates request.getCookies() unconditionally
+        // after the initial null-checks, so a request with a "jwt" param but zero cookies attached would
+        // NPE (caught by the global RestExceptionHandler and turned into a 200 anyway, but the blacklist
+        // would never run) - not something to route around by asserting the wrong thing.
+        mvc.perform(post("/jwt/blacklist")
+                        .param("jwt", jwtId.toString())
+                        .cookie(new Cookie("PHPSESSID", "irrelevant")))
+                .andExpect(status().isOk());
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(true));
+    }
+
+    // sessionId is accepted (and prevents the immediate empty-identifiers return) but is never actually
+    // read again anywhere in performBlacklist() - only the jwt cookie / jwt param drive real behavior.
+    @Test
+    void testBlacklistWithSessionIdParamOnlyIsAcceptedButHasNoEffect() throws Exception {
+        mvc.perform(post("/jwt/blacklist")
+                        .param("sessionId", "some-session-id")
+                        .cookie(new Cookie("PHPSESSID", "irrelevant")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testBlacklistWithNoIdentifiersReturnsOkImmediately() throws Exception {
+        mvc.perform(post("/jwt/blacklist"))
+                .andExpect(status().isOk());
+    }
+
+    // extendJwtSession()'s "extend from JWT cookie" branch blacklists the old token but - unlike the
+    // legacy-session-cookie branch - never actually mints/returns a replacement JWT cookie. Pinning down
+    // that actual (likely incomplete) behavior rather than asserting a replacement cookie that the current
+    // code never sets.
+    @Test
+    void testExtendJwtSessionUsingJwtCookieBlacklistsOldTokenWithoutIssuingReplacement() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
+        String jwtTokenString = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), jwtId.toString(), null, "11223344551");
+
+        mvc.perform(get("/jwt/extend-jwt-session")
+                        .cookie(new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString)))
+                .andExpect(status().isOk())
+                .andExpect(cookie().doesNotExist(jwtSignatureConfig.getCookieName()));
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(true));
+    }
+
+    @Test
+    void testChangeJwtRoleRequiresCookies() throws Exception {
+        mvc.perform(post("/jwt/change-jwt-role").content("{\"id\":\"11223344551\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testChangeJwtRoleRequiresIdInRequestBody() throws Exception {
+        mvc.perform(post("/jwt/change-jwt-role")
+                        .cookie(new Cookie("dummy", "value"))
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testChangeJwtRoleWithoutRoleRestrictionsCookieStillBlacklistsOldTokenButDoesNotChangeRole() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
+        String jwtTokenString = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), jwtId.toString(), null, "11223344551");
+
+        mvc.perform(post("/jwt/change-jwt-role")
+                        .cookie(new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString))
+                        .content("{\"id\":\"99887766554\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(true));
+    }
+
+    @Test
+    void testChangeJwtRoleWithValidRoleRestrictionsCookie() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
+        String jwtTokenString = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), jwtId.toString(), null, "11223344551");
+
+        String targetPersonalCode = "99887766554";
+        SignedJWT roleRestrictionsJwt = jwtUtils.getSignedJWTWithClaims(
+                UUID.randomUUID(),
+                "",
+                Collections.singletonMap(roleRestrctionsAttr, List.of(targetPersonalCode)),
+                new Date(),
+                DateUtils.addMinutes(new Date(), 30));
+
+        mvc.perform(post("/jwt/change-jwt-role")
+                        .cookie(
+                                new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString),
+                                new Cookie(roleRestrictionsCookieName, roleRestrictionsJwt.serialize()))
+                        .content("{\"id\":\"" + targetPersonalCode + "\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(true));
+    }
+
+    @Test
+    void testChangeJwtRoleWithGarbageRoleRestrictionsCookieIsTreatedAsInvalid() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30));
+        String jwtTokenString = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), jwtId.toString(), null, "11223344551");
+
+        mvc.perform(post("/jwt/change-jwt-role")
+                        .cookie(
+                                new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString),
+                                new Cookie(roleRestrictionsCookieName, "not-a-real-jwt"))
+                        .content("{\"id\":\"99887766554\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(true));
+    }
 
     @Test
     void testSessionExtensionUsingLegacySessionCookie() throws Exception {
@@ -316,135 +376,6 @@ class JwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(jsonPath("loggedInDate", is(creationTime.atZone(ZoneId.systemDefault()).toInstant().getEpochSecond() * 1000L)))
                 .andExpect(jsonPath("loginExpireDate", greaterThanOrEqualTo(expectedExpirationDate.atZone(ZoneId.systemDefault()).toInstant().getEpochSecond() * 1000L)));
     }
-
-//    @Test
-//     void testSessionExtensionUsingJwtCookieForEstonianPersonalCode() throws Exception {
-//
-//        Calendar instance = Calendar.getInstance();
-//        instance.set(Calendar.MILLISECOND, 0);
-//        Date tokenCreationDate = instance.getTime();
-//        instance.add(Calendar.MINUTE, 1);
-//        Date oldExpirationDate = instance.getTime();
-//        instance.add(Calendar.MINUTE, legacyPortalIntegrationConfig.getSessionTimeoutMinutes());
-//
-//        UUID oldJwtId = UUID.randomUUID();
-//        String personalCode = "EE11223344556";
-//        String jwtTokenString = getJwtTokenString(
-//                tokenCreationDate,
-//                oldExpirationDate, jwtSignatureConfig.getIssuer(), oldJwtId.toString(), Collections.singletonMap("personalCode", personalCode), personalCode);
-//
-//        jwtTokenInfoRepository.save(new JwtTokenInfo(oldJwtId, Timestamp.from(oldExpirationDate.toInstant()), Timestamp.from(tokenCreationDate.toInstant()), false, null, "not relevant"));
-//
-//        MvcResult mvcResult = mvc.perform(get("/jwt/extend-jwt-session")
-//                .cookie(new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString)))
-//                .andExpect(status().isOk())
-//                .andExpect(cookie().value(jwtSignatureConfig.getCookieName(), is(notNullValue())))
-//                .andExpect(cookie().maxAge(jwtSignatureConfig.getCookieName(), is(-1)))
-//                .andExpect(cookie().value(legacyPortalIntegrationConfig.getSessionCookieName(), is(notNullValue())))
-//                .andExpect(cookie().maxAge(legacyPortalIntegrationConfig.getSessionCookieName(), is(-1)))
-//                .andReturn();
-//
-//        Cookie extendedSessionInfo = mvcResult.getResponse().getCookie(jwtSignatureConfig.getCookieName());
-//        UserInfo userInfo = jwtUtils.decodeJwtTokenFromCookie(extendedSessionInfo);
-//        assertThat(userInfo.getLoginExpireDate(), greaterThanOrEqualTo(DateUtils.addMinutes(tokenCreationDate, legacyPortalIntegrationConfig.getSessionTimeoutMinutes())));
-//
-//
-//        //check that userinfo is updated
-//        mvc.perform(
-//                get("/jwt/userinfo")
-//                        .cookie(extendedSessionInfo))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("loggedInDate", is(tokenCreationDate.getTime())))
-//                .andExpect(jsonPath("loginExpireDate", greaterThanOrEqualTo(DateUtils.addMinutes(tokenCreationDate, legacyPortalIntegrationConfig.getSessionTimeoutMinutes()).getTime())));
-//
-//        //check that old cookie is blacklisted
-//        assertThat(jwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(oldJwtId), notNullValue());
-//
-//    }
-
-//    @Test
-//     void testSessionExtensionUsingJwtCookieForNonEstonianPersonalCode() throws Exception {
-//
-//        Calendar instance = Calendar.getInstance();
-//        instance.set(Calendar.MILLISECOND, 0);
-//        Date tokenCreationDate = instance.getTime();
-//        instance.add(Calendar.MINUTE, 1);
-//        Date oldExpirationDate = instance.getTime();
-//        instance.add(Calendar.MINUTE, legacyPortalIntegrationConfig.getSessionTimeoutMinutes());
-//
-//        UUID oldJwtId = UUID.randomUUID();
-//        String personalCode = "LT11223344556";
-//        String jwtTokenString = getJwtTokenString(
-//                tokenCreationDate,
-//                oldExpirationDate, jwtSignatureConfig.getIssuer(), oldJwtId.toString(), Collections.singletonMap("personalCode", personalCode), personalCode);
-//
-//        jwtTokenInfoRepository.save(new JwtTokenInfo(oldJwtId, Timestamp.from(oldExpirationDate.toInstant()), Timestamp.from(tokenCreationDate.toInstant()), false, null, "not relevant"));
-//
-//        MvcResult mvcResult = mvc.perform(get("/jwt/extend-jwt-session")
-//                .cookie(new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString)))
-//                .andExpect(status().isOk())
-//                .andExpect(cookie().value(jwtSignatureConfig.getCookieName(), is(notNullValue())))
-//                .andExpect(cookie().maxAge(jwtSignatureConfig.getCookieName(), is(-1)))
-//                .andExpect(cookie().doesNotExist(legacyPortalIntegrationConfig.getSessionCookieName()))
-//                .andReturn();
-//
-//        Cookie extendedSessionInfo = mvcResult.getResponse().getCookie(jwtSignatureConfig.getCookieName());
-//        UserInfo userInfo = jwtUtils.decodeJwtTokenFromCookie(extendedSessionInfo);
-//        assertThat(userInfo.getLoginExpireDate(), greaterThanOrEqualTo(DateUtils.addMinutes(tokenCreationDate, legacyPortalIntegrationConfig.getSessionTimeoutMinutes())));
-//
-//
-//        //check that userinfo is updated
-//        mvc.perform(
-//                get("/jwt/userinfo")
-//                        .cookie(extendedSessionInfo))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("loggedInDate", is(tokenCreationDate.getTime())))
-//                .andExpect(jsonPath("loginExpireDate", greaterThanOrEqualTo(DateUtils.addMinutes(tokenCreationDate, legacyPortalIntegrationConfig.getSessionTimeoutMinutes()).getTime())));
-//
-//        //check that old cookie is blacklisted
-//        assertThat(jwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(oldJwtId), notNullValue());
-//
-//    }
-
-//    @Test
-//     void testJwtRoleChange() throws Exception {
-//
-//        Calendar instance = Calendar.getInstance();
-//        instance.set(Calendar.MILLISECOND, 0);
-//        Date tokenCreationDate = instance.getTime();
-//        instance.add(Calendar.MINUTE, 1);
-//        Date oldExpirationDate = instance.getTime();
-//        instance.add(Calendar.MINUTE, legacyPortalIntegrationConfig.getSessionTimeoutMinutes());
-//
-//        UUID oldJwtId = UUID.randomUUID();
-//        String personalCode = "LT11223344556";
-//        String jwtTokenString = getJwtTokenString(
-//                tokenCreationDate,
-//                oldExpirationDate, jwtSignatureConfig.getIssuer(), oldJwtId.toString(), Collections.singletonMap("personalCode", personalCode), personalCode);
-//
-//        jwtTokenInfoRepository.save(new JwtTokenInfo(oldJwtId, Timestamp.from(oldExpirationDate.toInstant()), Timestamp.from(tokenCreationDate.toInstant()), false, null, "not relevant"));
-//
-//        Map<String, Object> claims = new HashMap<>();
-//        claims.put(roleRestrctionsAttr, Lists.newArrayList("LT99887766554", "LT99887766555"));
-//        SignedJWT roleRestrictionsJwt = jwtUtils.getSignedJWTWithClaims(UUID.randomUUID(), "", claims, new Date(), new Date(new Date().getTime() + 60000));
-//        Cookie roleRestrictionsCookie = new Cookie(roleRestrictionsCookieName, roleRestrictionsJwt.serialize());
-//        Cookie jwtCookie = new Cookie(jwtSignatureConfig.getCookieName(), jwtTokenString);
-//
-//        MvcResult mvcResult = mvc.perform(post("/jwt/change-jwt-role")
-//                .content("{\"id\":\"LT99887766554\"}")
-//                .cookie(jwtCookie, roleRestrictionsCookie))
-//                .andExpect(status().isOk())
-//                .andExpect(cookie().value(jwtSignatureConfig.getCookieName(), is(notNullValue())))
-//                .andExpect(cookie().maxAge(jwtSignatureConfig.getCookieName(), is(-1)))
-//                .andExpect(cookie().doesNotExist(legacyPortalIntegrationConfig.getSessionCookieName()))
-//                .andReturn();
-//
-//        String jwtString = mvcResult.getResponse().getContentAsString();
-//        SignedJWT roleChangeJwt = SignedJWT.parse(jwtString);
-//        assertEquals("LT99887766554" ,roleChangeJwt.getJWTClaimsSet().getClaim("personalCode"));
-//        assertThat(jwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(oldJwtId), notNullValue());
-//    }
-
 
     private SessionsEntity createSessionsEntity(String legacySessionId, LocalDateTime validFrom, LocalDateTime validTo) {
         SessionsEntity sessionsEntity = new SessionsEntity();
