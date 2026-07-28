@@ -27,7 +27,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
@@ -104,6 +106,13 @@ public class SecurityConfiguration {
 
                             .requestMatchers("/**")
                             .authenticated())
+                    // TODO GovSSO RP-initiated logout: when logging out a GovSSO-authenticated session,
+                    //  the end_session_endpoint (from the govsso ClientRegistration's discovery metadata)
+                    //  should be called with id_token_hint/post_logout_redirect_uri so the GovSSO session
+                    //  is also terminated. Not implemented yet - local-only logout for all registrations.
+                    // TODO GovSSO back-channel logout: GovSSO can also push a logout_token to a dedicated
+                    //  endpoint (POST /oauth2/back-channel-logout/govsso) to end sessions initiated
+                    //  elsewhere. Not implemented yet.
                     .logout(logoutUrl ->
                         logoutUrl.logoutUrl("/logout")
                             .logoutSuccessUrl(frontPageRedirectUrl))
@@ -177,7 +186,9 @@ public class SecurityConfiguration {
         return source;
     }
 
-    private static final String REGISTRATION_ID = "tara";
+    public static final String REGISTRATION_ID_TARA = "tara";
+    public static final String REGISTRATION_ID_GOVSSO = "govsso";
+
     @Value("${security.oauth2.client.user-authorization-uri}")
     String authorizationUri;
     @Value("${security.oauth2.client.client-id}")
@@ -195,6 +206,23 @@ public class SecurityConfiguration {
     @Value("${security.oauth2.client.scope}")
     String scope;
 
+    @Value("${security.oauth2.govsso.enabled:false}")
+    boolean govssoEnabled;
+    @Value("${security.oauth2.govsso.user-authorization-uri:}")
+    String govssoAuthorizationUri;
+    @Value("${security.oauth2.govsso.client-id:}")
+    String govssoClientId;
+    @Value("${security.oauth2.govsso.client-secret:}")
+    String govssoClientSecret;
+    @Value("${security.oauth2.govsso.registered-redirect-uri:}")
+    String govssoRedirectUrlTemplate;
+    @Value("${security.oauth2.govsso.access-token-uri:}")
+    String govssoTokenUri;
+    @Value("${security.oauth2.govsso.jwk-set-uri:}")
+    String govssoJwkSetUri;
+    @Value("${security.oauth2.govsso.scope:openid}")
+    String govssoScope;
+
 
     @Bean
     public ClientRegistrationRepository clientRegistrationRepository() {
@@ -202,20 +230,45 @@ public class SecurityConfiguration {
                 + authorizationUri
                 + redirectUrlTemplate
                 + tokenUri);
-        return new InMemoryClientRegistrationRepository(
-                ClientRegistration
-                        .withRegistrationId(REGISTRATION_ID)
-                        .authorizationUri(authorizationUri)
-                        .clientId(clientId)
-                        .clientName(clientName)
-                        .clientSecret(clientSecret)
-                        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                        .redirectUri(redirectUrlTemplate)
-                        .tokenUri(tokenUri)
-                        .jwkSetUri(jwkSetUri)
-                        .scope(defaultString(scope).split("[\\s]+"))
-                        .build());
+
+        List<ClientRegistration> registrations = new ArrayList<>();
+
+        registrations.add(ClientRegistration
+                .withRegistrationId(REGISTRATION_ID_TARA)
+                .authorizationUri(authorizationUri)
+                .clientId(clientId)
+                .clientName(clientName)
+                .clientSecret(clientSecret)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri(redirectUrlTemplate)
+                .tokenUri(tokenUri)
+                .jwkSetUri(jwkSetUri)
+                .scope(defaultString(scope).split("[\\s]+"))
+                .build());
+
+        // GovSSO registration is opt-in (security.oauth2.govsso.enabled=true) so that environments
+        // which haven't been onboarded to GovSSO yet keep working with just the tara registration.
+        if (govssoEnabled) {
+            log.info("SecurityConfiguration.clientRegistrationRepository(): govsso registration enabled");
+            registrations.add(ClientRegistration
+                    .withRegistrationId(REGISTRATION_ID_GOVSSO)
+                    .authorizationUri(govssoAuthorizationUri)
+                    .clientId(govssoClientId)
+                    .clientName(govssoClientId)
+                    .clientSecret(govssoClientSecret)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .redirectUri(govssoRedirectUrlTemplate)
+                    .tokenUri(govssoTokenUri)
+                    .jwkSetUri(govssoJwkSetUri)
+                    .scope(defaultString(govssoScope).split("[\\s]+"))
+                    .build());
+        }
+
+        return new InMemoryClientRegistrationRepository(registrations);
     }
 
+    // TODO GovSSO token refresh: unlike tara, a GovSSO session can be refreshed via the refresh_token
+    //  grant without a full re-authentication round-trip. Not implemented yet - GovSSO sessions expire
+    //  the same way tara sessions do today.
 
 }

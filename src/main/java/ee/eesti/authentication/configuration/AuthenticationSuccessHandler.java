@@ -73,13 +73,25 @@ public class AuthenticationSuccessHandler extends SavedRequestAwareAuthenticatio
 
         UserInfo userInfo = new UserInfo();
         String personalCode = (String) casted.getPrincipal().getAttributes().get("sub");
-        LinkedTreeMap profileAttributes = (LinkedTreeMap) casted.getPrincipal().getAttributes().get("profile_attributes");
+
+        String firstName;
+        String lastName;
+        if (SecurityConfiguration.REGISTRATION_ID_GOVSSO.equals(casted.getAuthorizedClientRegistrationId())) {
+            // GovSSO exposes given_name/family_name as flat, standard OIDC claims (unlike tara, which
+            // nests them under "profile_attributes").
+            firstName = (String) casted.getPrincipal().getAttributes().get("given_name");
+            lastName = (String) casted.getPrincipal().getAttributes().get("family_name");
+        } else {
+            LinkedTreeMap profileAttributes = (LinkedTreeMap) casted.getPrincipal().getAttributes().get("profile_attributes");
+            firstName = (String) profileAttributes.get("given_name");
+            lastName = (String) profileAttributes.get("family_name");
+        }
 
         userInfo.setPersonalCode(personalCode);
         userInfo.setAuthenticatedAs(personalCode);
         userInfo.setHash(getUniqueRandomHash());
-        userInfo.setFirstName((String) profileAttributes.get("given_name"));
-        userInfo.setLastName((String) profileAttributes.get("family_name"));
+        userInfo.setFirstName(firstName);
+        userInfo.setLastName(lastName);
         userInfo.setLoggedInDate(new Date());
         userInfo.setLoginExpireDate(
                 DateUtils.addMinutes(

@@ -27,9 +27,18 @@ jobs:
 
       - name: Install Dependencies
         run: ./mvnw install:install-file -Dfile=libs/id-log-1.0.0-SNAPSHOT.jar -DgroupId=ee.ria.commons -DartifactId=id-log -Dversion=1.0.0-SNAPSHOT -Dpackaging=jar -DgeneratePom=true
-        
+
+      # jwtkeystore.jks is gitignored and normally generated per-developer (see generate-keystore.sh);
+      # tests need one on the classpath, and src/test/resources/application.properties already hardcodes
+      # the matching password ("ppjjpp", the same example password documented in README.md) for it.
+      - name: Generate test JWT keystore
+        run: |
+          keytool -genkeypair -alias jwtsign -keyalg RSA -keysize 2048 \
+            -keystore src/main/resources/jwtkeystore.jks \
+            -dname "CN=, OU=, O=, L=, ST=, C=" -storepass ppjjpp -validity 3650
+
       - name: Analyze with SonarCloud
-        run: ./mvnw -B verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }} -Dsonar.host.url=https://sonarcloud.io -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} -DskipTests
+        run: ./mvnw -B verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }} -Dsonar.host.url=https://sonarcloud.io -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
