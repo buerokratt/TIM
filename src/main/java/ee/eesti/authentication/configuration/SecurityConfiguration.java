@@ -13,7 +13,7 @@ import org.springframework.context.annotation.*;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.client.registration.InMemoryClientReg
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -80,7 +81,7 @@ public class SecurityConfiguration {
                         .disable())
                 .cors(Customizer.withDefaults())
                 .headers(header -> header.contentSecurityPolicy(csp -> csp.policyDirectives(contentSecurityPolicy)))
-                .authorizeRequests(auth -> // auth.requestMatchers("/**").permitAll()
+                .authorizeHttpRequests(auth -> // auth.requestMatchers("/**").permitAll()
                     auth.requestMatchers("/v2/api-docs",
                             "/swagger-resources/configuration/ui",
                             "/swagger-resources",
@@ -96,7 +97,7 @@ public class SecurityConfiguration {
                             .requestMatchers("/jwt/custom-jwt-generate",
                                 "/jwt/custom-jwt-userinfo",
                                 "/jwt/change-jwt-role")
-                            .access(getAllowedIps())
+                            .access(new WebExpressionAuthorizationManager(getAllowedIps()))
 
                             .requestMatchers("/jwt/**")
                             .permitAll()
@@ -138,7 +139,7 @@ public class SecurityConfiguration {
 
     @Bean
     public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient() {
-        return new DefaultAuthorizationCodeTokenResponseClient();
+        return new RestClientAuthorizationCodeTokenResponseClient();
     }
 
 
