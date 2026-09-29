@@ -1,5 +1,6 @@
 create schema if not exists pwa;
 create schema if not exists jwt_blacklist;
+create schema if not exists jwt_whitelist;
 
 create table if not exists pwa.sessions (
     sess_id bigint not null,

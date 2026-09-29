@@ -59,6 +59,13 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
         System.out.println(jwtTokenString);
     }
 
+    // /jwt/custom-jwt-generate (and /jwt/custom-jwt-extend, which delegates to it) wrap the signed JWT
+    // in a {"token": "<jwt>"} JSON body (since 785fd84, "Formated Generate Response") rather than
+    // returning the bare JWT string.
+    private String extractToken(String generateResponseBody) throws Exception {
+        return objectMapper.readTree(generateResponseBody).get("token").asText();
+    }
+
     private CustomJwtTokenRequest getValidCustomJwtTokenRequest(int expirationInMinutes) {
         Map<String, Object> stringObjectMap = new HashMap<>();
         stringObjectMap.put("testContent", "some test here");
@@ -76,6 +83,11 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .build();
     }
 
+    // Stays disabled: RestExceptionHandler catches Throwable globally (including the
+    // MethodArgumentNotValidException / NullPointerException these cases trigger) and always returns
+    // HTTP 200, so @Valid violations on CustomJwtTokenRequest can never actually surface as 400 today.
+    // That's a main-code behavior issue, not a stale assertion, so left disabled rather than "fixed" by
+    // asserting the current (200) behavior as if it were correct.
     @Test
     @Disabled
     void testCustomJwtTokenValidation() throws Exception {
@@ -148,7 +160,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Cookie cookie = new Cookie("cookieName", jwtTokenString);
+        Cookie cookie = new Cookie("cookieName", extractToken(jwtTokenString));
 
         mvc.perform(
                         post("/jwt/custom-jwt-verify")
@@ -186,7 +198,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Cookie cookie = new Cookie("cookieName", jwtTokenString);
+        Cookie cookie = new Cookie("cookieName", extractToken(jwtTokenString));
 
         // no param
         mvc.perform(
@@ -215,7 +227,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Cookie customJwtCookie = new Cookie("cookieName", jwtTokenString);
+        Cookie customJwtCookie = new Cookie("cookieName", extractToken(jwtTokenString));
 
         mvc.perform(
                         post("/jwt/custom-jwt-verify")
@@ -252,7 +264,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Cookie customJwtCookie = new Cookie("cookieName", jwtTokenString);
+        Cookie customJwtCookie = new Cookie("cookieName", extractToken(jwtTokenString));
 
         mvc.perform(
                         post("/jwt/custom-jwt-blacklist")
@@ -287,8 +299,8 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        SignedJWT customJwtToken = SignedJWT.parse(jwtTokenString);
-        Cookie customJwtCookie = new Cookie("cookieName", jwtTokenString);
+        SignedJWT customJwtToken = SignedJWT.parse(extractToken(jwtTokenString));
+        Cookie customJwtCookie = new Cookie("cookieName", extractToken(jwtTokenString));
 
         mvc.perform(
                         post("/jwt/custom-jwt-verify")
@@ -306,7 +318,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .getResponse()
                 .getContentAsString();
 
-        assertNotEquals(jwtTokenString, extendedCustomTokenString);
+        assertNotEquals(extractToken(jwtTokenString), extractToken(extendedCustomTokenString));
 
         UUID customJwtTokenId = UUID.fromString(customJwtToken.getJWTClaimsSet().getJWTID());
         assertTrue(customJwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(customJwtTokenId).isPresent());
@@ -317,7 +329,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                                 .content("cookieName"))
                 .andExpect(status().isBadRequest());
 
-        SignedJWT extendedCustomJwtToken = SignedJWT.parse(extendedCustomTokenString);
+        SignedJWT extendedCustomJwtToken = SignedJWT.parse(extractToken(extendedCustomTokenString));
 
         assertThat(customJwtToken.getJWTClaimsSet().getClaims().size(), is(extendedCustomJwtToken.getJWTClaimsSet().getClaims().size()));
         assertThat(customJwtToken.getJWTClaimsSet().getExpirationTime(), lessThanOrEqualTo(extendedCustomJwtToken.getJWTClaimsSet().getExpirationTime()));
@@ -332,7 +344,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
 
         mvc.perform(
                         post("/jwt/custom-jwt-verify")
-                                .cookie(new Cookie("cookieName", extendedCustomTokenString))
+                                .cookie(new Cookie("cookieName", extractToken(extendedCustomTokenString)))
                                 .content("cookieName"))
                 .andExpect(status().isOk());
     }
@@ -348,7 +360,7 @@ class CustomJwtControllerTest extends AbstractSpringBasedTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Cookie customJwtCookie = new Cookie("cookieName", jwtTokenString);
+        Cookie customJwtCookie = new Cookie("cookieName", extractToken(jwtTokenString));
 
         String customUserInfoResponse = mvc.perform(
                         post("/jwt/custom-jwt-userinfo")

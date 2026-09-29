@@ -92,6 +92,20 @@ Run docker with `docker-compose up -d`
 
 **Note!** Some configuration changes may require you to rebuild docker image using `docker-compose build` for them to take effect.
 
+# 4. Running tests
+
+This requires a local JDK 17+ and [ID-log](https://github.com/buerokratt/Java.commons/tree/public) installed
+(see [1.2 ID-log](#12-id-log)). If your local setup doesn't match, run the tests in Docker instead - no
+local JDK or ID-log install required:
+
+```
+docker build -f Dockerfile.test .
+```
+
+This builds the project and runs the full test suite (including a JaCoCo coverage report) inside a
+container matching the project's JDK version, and fails the build (non-zero exit code) if any test
+fails. It doesn't produce a runnable image - it's a test gate, not a deployment artifact.
+
 ## Licence
 
 See licence [here](LICENSE).
