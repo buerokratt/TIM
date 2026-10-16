@@ -91,7 +91,7 @@ public class CustomJwtController {
             customJwtTokenInfo.setIssuedDate(Timestamp.from(signedJWT.getJWTClaimsSet().getIssueTime().toInstant()));
             customJwtTokenInfo.setExpiredDate(Timestamp.from(signedJWT.getJWTClaimsSet().getExpirationTime().toInstant()));
         } catch (ParseException e) {
-            log.error("unable to get issued / expired date from generated token", e);
+            log.error("unable to get issued / expired date from generated token");
             return emptyOkResponse;
         }
 
@@ -119,7 +119,7 @@ public class CustomJwtController {
     }
 
     private SignedJWT getCustomJwtSigned(CustomJwtTokenRequest request) {
-        log.debug("custom jwt token requested with: {}", request);
+        log.debug("JWT operation metadata only");
 
         Calendar calendar = Calendar.getInstance();
 
@@ -136,7 +136,7 @@ public class CustomJwtController {
                 startDate,
                 expiryDate);
 
-        log.debug("token created: {}", signedJWT.toString());
+        log.debug("JWT operation metadata only");
         return signedJWT;
     }
 
@@ -190,14 +190,14 @@ public class CustomJwtController {
             Optional<CustomJwtTokenInfo> tokenToBlacklist = customJwtTokenInfoRepository.findById(UUID.fromString(jwt.getJWTClaimsSet().getJWTID()));
 
             if (!tokenToBlacklist.isPresent()) {
-                log.warn("token to be blacklisted not found JWT: {}", jwt.serialize());
+                log.warn("JWT operation metadata only");
             } else {
                 jwtService.blacklist(tokenToBlacklist.get());
             }
             return emptyOkResponse;
 
         } catch (Exception e) {
-            log.error("failed to blacklist JWT token: " + cookie.getValue(), e);
+            log.error("JWT operation metadata only");
             return emptyOkResponse;
         }
     }
@@ -223,7 +223,7 @@ public class CustomJwtController {
         }
 
         if (!jwtUtils.isJwtTokenValid(cookie.getValue(), true)) {
-            log.warn("attempted to extend invalid token {}", cookie.getValue());
+            log.warn("JWT operation metadata only");
             return emptyOkResponse;
         }
 
@@ -246,7 +246,7 @@ public class CustomJwtController {
                     try {
                         transferredCustomClaims.put(customClaimKey, customJwtToken.getJWTClaimsSet().getClaim(customClaimKey));
                     } catch (ParseException e) {
-                        log.error("unable to transfer claim from old token to extended token", e);
+                        log.error("unable to transfer claim from old token to extended token");
                         throw new IllegalStateException(e);
                     }
                 });
@@ -258,7 +258,7 @@ public class CustomJwtController {
                     new CustomJwtTokenRequest(transferredCustomClaims, expirationInMinutesCalculatedFromOldJwtToken, cookieName),
                     response);
         } catch (ParseException e) {
-            log.error("unable to parse JWT from cookie value " + cookie.getValue(), e);
+            log.error("JWT operation metadata only");
             return emptyOkResponse;
         }
     }
@@ -284,7 +284,7 @@ public class CustomJwtController {
         try {
             if ( !jwtUtils.isJwtTokenValid(customJwtCookie.getValue(), true)) {
 
-                log.debug("cookie with value {} is not valid", customJwtCookie.getValue());
+                log.debug("JWT operation metadata only");
                 return emptyOkResponse;
             }
 

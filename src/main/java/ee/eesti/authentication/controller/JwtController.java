@@ -198,14 +198,14 @@ public class JwtController {
         }
 
         if (!jwtUtils.isJwtTokenValid(cookie.getValue(), false)) {
-            log.debug("cookie is invalid, cookie value: {}", cookie.getValue());
+            log.debug("JWT operation metadata only");
             return badRequest;
         }
 
         UserInfo userInfo = jwtUtils.decodeJwtTokenFromCookie(cookie);
 
         if (userInfo == null) {
-            log.debug("userinfo cannot be parsed from cookie: {} ", cookie.getValue());
+            log.debug("JWT operation metadata only");
         }
 
         return  userInfo == null
@@ -318,7 +318,7 @@ public class JwtController {
                         .orElseThrow(() -> new IllegalArgumentException("old jwt token info is not found for blacklisting"));
                 blacklist(jwtTokenInfo);
             } catch (Exception e) {
-                log.error("exception in blacklisting old token before extension session", e);
+                log.error("exception in blacklisting old token before extension session");
                 throw new RuntimeException(e);
             }
         }
@@ -453,7 +453,7 @@ public class JwtController {
         jwtTokenInfo.setBlacklistedDate(new Timestamp(System.currentTimeMillis()));
 
         jwtTokenInfoRepository.save(jwtTokenInfo);
-        log.debug("jwtTokenInfo blacklisted ({})", jwtTokenInfo);
+        log.debug("JWT operation metadata only");
     }
 
     private boolean isValidChangeRole(String personalCode, Cookie[] cookies) {

@@ -1,0 +1,6 @@
+{
+  "tim": {
+    "dockerfile": "ci/central/tim.Dockerfile",
+    "context": "."
+  }
+}

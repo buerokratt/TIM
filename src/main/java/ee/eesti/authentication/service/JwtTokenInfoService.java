@@ -59,7 +59,7 @@ public class JwtTokenInfoService {
 
 		jwtTokenInfoRepository.save(jwtTokenInfo);
 		jwtTokenInfoRepository.flush();
-		log.debug("jwtTokenInfo blacklisted ({})", jwtTokenInfo);
+		log.debug("JWT operation metadata only");
 	}
 
 
@@ -70,7 +70,7 @@ public class JwtTokenInfoService {
 
 		customJwtTokenInfoRepository.save(jwtTokenInfo);
 		customJwtTokenInfoRepository.flush();
-		log.debug("customJwtTokenInfo blacklisted ({})", jwtTokenInfo);
+		log.debug("JWT operation metadata only");
 	}
 
 }

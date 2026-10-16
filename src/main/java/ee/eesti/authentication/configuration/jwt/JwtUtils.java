@@ -115,7 +115,7 @@ public class JwtUtils {
         try {
             signedJWT.sign(rsassaSigner);
         } catch (JOSEException e) {
-            log.error("cannot sign the JWT token", e);
+            log.error("cannot sign the JWT token");
             throw new IllegalStateException(e);
         }
 
@@ -208,7 +208,7 @@ public class JwtUtils {
                     authMethod);
 
         } catch (ParseException e) {
-            log.warn("could not parse UserInfo from JWT token string", e);
+            log.warn("could not parse UserInfo from JWT token string");
         }
         return null;
     }
@@ -257,7 +257,7 @@ public class JwtUtils {
             }
 
         } catch (Exception e) {
-            log.warn("token cannot be verified", e);
+            log.warn("token cannot be verified");
             valid = false;
         }
 
