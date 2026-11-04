@@ -22,7 +22,6 @@ import org.springframework.security.oauth2.client.registration.InMemoryClientReg
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -97,7 +96,7 @@ public class SecurityConfiguration {
                             .requestMatchers("/jwt/custom-jwt-generate",
                                 "/jwt/custom-jwt-userinfo",
                                 "/jwt/change-jwt-role")
-                            .access(new WebExpressionAuthorizationManager(getAllowedIps()))
+                            .access(new AllowlistAuthorizationManager(allowedJWTIps))
 
                             .requestMatchers("/jwt/**")
                             .permitAll()
@@ -126,15 +125,6 @@ public class SecurityConfiguration {
                             .tokenEndpoint(aot -> aot.accessTokenResponseClient(accessTokenResponseClient))
                             .successHandler(authenticationSuccessHandler));
         return http.build();
-    }
-
-    private String getAllowedIps() {
-        return Arrays.stream(allowedJWTIps.split(",")).reduce("", (partialString, element) -> {
-            if (partialString.equals("")) {
-                return partialString + String.format("hasIpAddress('%s')", element);
-            }
-            return partialString + " or " + String.format("hasIpAddress('%s')", element);
-        });
     }
 
     @Bean
