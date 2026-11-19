@@ -13,10 +13,13 @@ import ee.eesti.authentication.configuration.jwt.JwtUtils;
 import ee.eesti.authentication.constant.JwtSignatureConfig;
 import ee.eesti.authentication.constant.LegacyPortalIntegrationConfig;
 import ee.eesti.authentication.domain.UserInfo;
+import ee.eesti.authentication.repository.CustomJwtTokenInfoRepository;
 import ee.eesti.authentication.repository.JwtTokenInfoRepository;
+import ee.eesti.authentication.repository.entity.CustomJwtTokenInfo;
 import ee.eesti.authentication.repository.SessionsRepository;
 import ee.eesti.authentication.repository.entity.SessionsEntity;
 import ee.eesti.authentication.service.JwtTokenInfoService;
+import ee.eesti.authentication.service.WhiteListService;
 import org.apache.commons.lang3.time.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +73,12 @@ class JwtControllerTest extends AbstractSpringBasedTest {
 
     @Autowired
     private SessionsRepository sessionsRepository;
+
+    @Autowired
+    private CustomJwtTokenInfoRepository customJwtTokenInfoRepository;
+
+    @Autowired
+    private WhiteListService whiteListService;
 
     @Autowired
     private JwtUtils jwtUtils;
@@ -385,6 +394,72 @@ class JwtControllerTest extends AbstractSpringBasedTest {
         sessionsEntity.setValidTo(validTo.atOffset(ZoneOffset.UTC).toLocalDateTime());
 
         return sessionsEntity;
+    }
+    @Test
+    void testBlacklistBySidBlacklistsAllTokensWithThatSidOnly() throws Exception {
+        Timestamp expiry = new Timestamp(new Date().getTime() + 1000 * 60 * 30);
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        UUID otherSession = UUID.randomUUID();
+        UUID noSid = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(first, DEFAULT_SESSION_ID_1, expiry, "sid-to-kill");
+        jwtTokenInfoService.createJwtTokenInfo(second, DEFAULT_SESSION_ID_1, expiry, "sid-to-kill");
+        jwtTokenInfoService.createJwtTokenInfo(otherSession, DEFAULT_SESSION_ID_1, expiry, "other-sid");
+        jwtTokenInfoService.createJwtTokenInfo(noSid, DEFAULT_SESSION_ID_1, expiry);
+
+        CustomJwtTokenInfo custom = new CustomJwtTokenInfo();
+        custom.setExpiredDate(expiry);
+        custom.setCustomClaimKeys("sid");
+        custom.setSid("sid-to-kill");
+        customJwtTokenInfoRepository.saveAndFlush(custom);
+        whiteListService.addSessionToAllowlist(custom.getJwtUuid().toString(), expiry);
+
+        mvc.perform(post("/jwt/blacklist-sid").content("sid-to-kill"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.blacklisted").value(3));
+
+        assertThat(jwtTokenInfoRepository.findById(first).orElseThrow().isBlacklisted(), is(true));
+        assertThat(jwtTokenInfoRepository.findById(second).orElseThrow().isBlacklisted(), is(true));
+        assertThat(jwtTokenInfoRepository.findById(otherSession).orElseThrow().isBlacklisted(), is(false));
+        assertThat(jwtTokenInfoRepository.findById(noSid).orElseThrow().isBlacklisted(), is(false));
+        assertThat(customJwtTokenInfoRepository.findById(custom.getJwtUuid()).orElseThrow().isBlacklisted(), is(true));
+        assertThat(whiteListService.checkWhitelisted(custom.getJwtUuid().toString()), is(false));
+
+        // already blacklisted tokens are not counted again
+        mvc.perform(post("/jwt/blacklist-sid").content("sid-to-kill"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.blacklisted").value(0));
+    }
+
+    @Test
+    void testBlacklistBySidMakesSignedTokenInvalid() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30), "sid-x");
+        String token = getJwtTokenString(new Date(), DateUtils.addMinutes(new Date(), 30), jwtUtils.getFirstIssuer(), jwtId.toString(), null, "11223344551");
+        assertThat(jwtUtils.isJwtTokenValid(token, false), is(true));
+
+        mvc.perform(post("/jwt/blacklist-sid").content("sid-x")).andExpect(status().isOk());
+
+        assertThat(jwtUtils.isJwtTokenValid(token, false), is(false));
+    }
+
+    @Test
+    void testBlacklistBySidWithoutSidIsBadRequest() throws Exception {
+        mvc.perform(post("/jwt/blacklist-sid")).andExpect(status().isBadRequest());
+        mvc.perform(post("/jwt/blacklist-sid").content(" ")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testBlacklistBySidIsRestrictedToAllowlistedIps() throws Exception {
+        UUID jwtId = UUID.randomUUID();
+        jwtTokenInfoService.createJwtTokenInfo(jwtId, DEFAULT_SESSION_ID_1, new Timestamp(new Date().getTime() + 1000 * 60 * 30), "sid-protected");
+
+        // non-allowlisted callers are sent to the login flow (302) like the other allowlist-protected endpoints
+        mvc.perform(post("/jwt/blacklist-sid").content("sid-protected")
+                        .with(request -> { request.setRemoteAddr("10.1.2.3"); return request; }))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(jwtTokenInfoRepository.findById(jwtId).orElseThrow().isBlacklisted(), is(false));
     }
 
     private Date convertToDate(LocalDateTime localDateTime) {

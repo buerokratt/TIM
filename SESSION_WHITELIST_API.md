@@ -96,13 +96,15 @@ Checks multiple session keys and returns those that are NOT whitelisted.
 
 ### Check Multiple Session Keys (String Format)
 
-Alternative endpoint for checking multiple session keys using a comma-separated string format.
+Alternative endpoint for checking multiple session keys, passed as a single comma-separated string.
 
 **Endpoint**: `POST /sessionkey/keysString`
 
 **Request Body**:
-```
-key-1, key-2, key-3
+```json
+{
+  "keys": "key-1,key-2,key-3"
+}
 ```
 
 **Response**:

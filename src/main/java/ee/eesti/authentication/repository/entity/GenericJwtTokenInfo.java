@@ -39,4 +39,11 @@ public abstract class GenericJwtTokenInfo {
     @Column(name = "blacklisted_date")
     private Timestamp blacklistedDate;
 
+    /**
+     * Value of the token's "sid" (session id) claim, if any. Allows blacklisting every token
+     * belonging to one session at once.
+     */
+    @Column(name = "sid")
+    private String sid;
+
 }

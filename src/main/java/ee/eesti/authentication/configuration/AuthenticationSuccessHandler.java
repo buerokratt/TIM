@@ -35,6 +35,8 @@ import static ee.eesti.authentication.configuration.CustomSessionAttributeSecuri
 @Slf4j
 public class AuthenticationSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
+    private static final String GOVSSO_SID_ATTRIBUTE = "sid";
+
     public static final String DEFAULT_LEGACY_SESSION_ID_VALUE = "-1";
 
     private final SessionsService sessionsService;
@@ -110,12 +112,19 @@ public class AuthenticationSuccessHandler extends SavedRequestAwareAuthenticatio
         }
         userInfo.setAuthMethod(amr);
 
+        // GovSSO includes the SSO session id as "sid" in the ID token (OIDC standard name); carry it over
+        // (under the configured claim name) so all JWTs of one SSO session can be blacklisted together.
+        // TARA does not send it.
+        Object sidClaim = casted.getPrincipal().getAttributes().get(GOVSSO_SID_ATTRIBUTE);
+        String sid = sidClaim == null ? null : sidClaim.toString();
+
         UUID jwtTokenId = UUID.randomUUID();
-        SignedJWT signedJWT = jwtUtils.createSignedJwt(jwtTokenId, userInfo);
+        SignedJWT signedJWT = jwtUtils.createSignedJwt(jwtTokenId, userInfo, sid);
         jwtTokenInfoService.createJwtTokenInfo(
                 jwtTokenId,
                     UUID.randomUUID().toString(),
-                new Timestamp(userInfo.getLoginExpireDate().getTime()));
+                new Timestamp(userInfo.getLoginExpireDate().getTime()),
+                sid);
 
         response.addCookie(jwtUtils.getJwtCookie(signedJWT));
 

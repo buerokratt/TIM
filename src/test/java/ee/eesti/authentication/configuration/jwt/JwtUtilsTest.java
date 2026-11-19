@@ -20,7 +20,9 @@ import java.nio.file.Paths;
 import java.util.Date;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -50,6 +52,22 @@ class JwtUtilsTest extends AbstractSpringBasedTest {
 
         assertFalse(jwtUtils.isJwtTokenValid(signedJwtFromTestKeystore.serialize(), false));
 
+    }
+
+    @Test
+    void testSidClaimNameIsConfigurable() throws Exception {
+        String originalSidClaim = jwtSignatureConfig.getSidClaim();
+        try {
+            assertEquals("sid-1", jwtUtils.createSignedJwt(UUID.randomUUID(), new UserInfo(), "sid-1")
+                    .getJWTClaimsSet().getClaim("sid"));
+
+            jwtSignatureConfig.setSidClaim("session_id");
+            JWTClaimsSet claims = jwtUtils.createSignedJwt(UUID.randomUUID(), new UserInfo(), "sid-2").getJWTClaimsSet();
+            assertEquals("sid-2", claims.getClaim("session_id"));
+            assertNull(claims.getClaim("sid"));
+        } finally {
+            jwtSignatureConfig.setSidClaim(originalSidClaim);
+        }
     }
 
     private SignedJWT getSignedJwtFromTestKeystore(UserInfo userInfo) throws Exception {

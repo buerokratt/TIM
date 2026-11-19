@@ -25,7 +25,7 @@ public class JwtTokenInfo extends GenericJwtTokenInfo {
 
     public JwtTokenInfo(UUID jwtUuid, Timestamp expiredDate, Timestamp issuedDate, boolean blacklisted, Timestamp blacklistedDate
     ) {
-        super(jwtUuid, expiredDate, issuedDate, blacklisted, blacklistedDate);
+        super(jwtUuid, expiredDate, issuedDate, blacklisted, blacklistedDate, null);
     }
 
 }

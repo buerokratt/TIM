@@ -74,8 +74,10 @@ class SessionKeyControllerTest extends AbstractSpringBasedTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
+        // body format matches the real caller (Buerokratt-Chatbot end-dead-chats.yml: body: { keys: "a,b" })
         mvc.perform(post("/sessionkey/keysString")
-                        .content("whitelisted-key-2,not-whitelisted-key-2"))
+                        .content("{\"keys\":\"whitelisted-key-2,not-whitelisted-key-2\"}")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[\"not-whitelisted-key-2\"]"));
     }

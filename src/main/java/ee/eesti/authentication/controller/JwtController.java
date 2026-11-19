@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -428,6 +429,29 @@ public class JwtController {
         }
 
         return emptyOkResponse;
+    }
+
+    /**
+     * Blacklists all JWTs (regular and custom) whose session id claim matches the given value.
+     *
+     * @param sid session id (plain-text body) whose tokens are to be blacklisted
+     * @return 200 with the number of blacklisted tokens, 400 if sid is missing
+     */
+    @ApiOperation(value = "Blacklist all JWTs with the given sid claim", response = ResponseEntity.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, response = ResponseEntity.class, message = "tokens blacklisted, body contains the count"),
+            @ApiResponse(code = 400, message = "sid missing")
+    })
+    @PostMapping("/blacklist-sid")
+    public ResponseEntity<?> blacklistBySid(
+            @ApiParam(name = "sid", value = "Session id (session id claim value) whose tokens to blacklist")
+            @RequestBody(required = false) String sid
+    ) {
+        if (sid == null || sid.isBlank()) {
+            return badRequest;
+        }
+        int count = jwtTokenInfoService.blacklistBySid(sid.trim());
+        return ResponseEntity.ok(Map.of("blacklisted", count));
     }
 
     private void removeCookie(HttpServletResponse response, Cookie c, String domain, String path) {

@@ -19,4 +19,6 @@
     <include file="changelog/20211112170000_custom_jwt_token.xml" relativeToChangelogFile="false"/>
     <include file="changelog/20211215183821_remove_session_id_from_blacklist.xml" relativeToChangelogFile="false"/>
     <include file="changelog/20250310170000_session_allowlist.xml" relativeToChangelogFile="false" />
+    <include file="changelog/20261111120000_jwt_sid.xml" relativeToChangelogFile="false"/>
+    <include file="changelog/20261119120000_custom_jwt_update_required.xml" relativeToChangelogFile="false"/>
 </databaseChangeLog>

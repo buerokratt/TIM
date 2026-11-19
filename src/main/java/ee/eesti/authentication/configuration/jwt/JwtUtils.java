@@ -11,6 +11,7 @@ import ee.eesti.authentication.constant.LegacyPortalIntegrationConfig;
 import ee.eesti.authentication.domain.UserInfo;
 import ee.eesti.authentication.repository.CustomJwtTokenInfoRepository;
 import ee.eesti.authentication.repository.JwtTokenInfoRepository;
+import ee.eesti.authentication.repository.entity.CustomJwtTokenInfo;
 import ee.eesti.authentication.repository.entity.SessionsEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
@@ -69,6 +70,26 @@ public class JwtUtils {
      * @return filled with information from userInfo
      */
     public SignedJWT createSignedJwt(UUID jwtTokenId, UserInfo userInfo) {
+        return createSignedJwt(jwtTokenId, userInfo, null);
+    }
+
+    /**
+     * @return name of the session id claim in JWTs, configured by jwt-integration.signature.sid-claim (default "sid")
+     */
+    public String getSidClaim() {
+        return jwtSignatureConfig.getSidClaim();
+    }
+
+    /**
+     * Same as {@link #createSignedJwt(UUID, UserInfo)}, additionally adding a session id claim
+     * (named by {@link #getSidClaim()}) when sid is not null.
+     *
+     * @param jwtTokenId id for token
+     * @param userInfo information about user
+     * @param sid session id claim value, may be null
+     * @return filled with information from userInfo
+     */
+    public SignedJWT createSignedJwt(UUID jwtTokenId, UserInfo userInfo, String sid) {
         Date issueDate = userInfo.getLoggedInDate() == null
                 ? new Date()
                 : userInfo.getLoggedInDate();
@@ -83,6 +104,9 @@ public class JwtUtils {
         claims.put("firstName", userInfo.getFirstName());
         claims.put("lastName", userInfo.getLastName());
         claims.put("authMethod", userInfo.getAuthMethod());
+        if (sid != null) {
+            claims.put(getSidClaim(), sid);
+        }
 
         return getSignedJWTWithClaims(jwtTokenId, userInfo.getPersonalCode(), claims, issueDate, expirationDate);
     }
@@ -217,16 +241,26 @@ public class JwtUtils {
      *
      * @param jwtTokenToCheck token to check
      * @param isCustomJwtToken is it a CustomJwtToken
-     * @return true if it was a valid token
+     * @return true if it was a valid token (including tokens flagged as update required)
      *
      * @see ee.eesti.authentication.repository.entity.CustomJwtTokenInfo
+     * @see #getJwtTokenStatus(String, boolean)
      */
-
     public boolean isJwtTokenValid(String jwtTokenToCheck, boolean isCustomJwtToken) {
-        boolean valid;
+        return getJwtTokenStatus(jwtTokenToCheck, isCustomJwtToken).isValid();
+    }
+
+    /**
+     *
+     * @param jwtTokenToCheck token to check
+     * @param isCustomJwtToken is it a CustomJwtToken
+     * @return INVALID if the token is malformed, badly signed, expired, issued in the future or blacklisted;
+     * UPDATE_REQUIRED if it is a custom JWT that is otherwise valid but flagged for update; VALID otherwise
+     */
+    public JwtTokenStatus getJwtTokenStatus(String jwtTokenToCheck, boolean isCustomJwtToken) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(jwtTokenToCheck);
-            valid = signedJWT.verify(verifier);
+            boolean valid = signedJWT.verify(verifier);
 
             Date now = new Date();
 
@@ -241,27 +275,40 @@ public class JwtUtils {
 
             if (now.after(signedJWT.getJWTClaimsSet().getExpirationTime())) {
                 log.debug("token (id: {}), is expired", signedJWT.getJWTClaimsSet().getJWTID());
-                valid = false;
-            } else if (now.before(signedJWT.getJWTClaimsSet().getIssueTime())) {
-                log.warn("token (id: {}), issue time is in the future", signedJWT.getJWTClaimsSet().getJWTID());
-                valid = false;
-            } else {
-                //check if the token is blacklisted already
-                UUID uuid = UUID.fromString(signedJWT.getJWTClaimsSet().getJWTID());
-                boolean blacklisted =
-                        isCustomJwtToken
-                                ? customJwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(uuid).isPresent()
-                                : jwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(uuid).isPresent();
-                log.debug("token with id: {} is blacklisted: {}", signedJWT.getJWTClaimsSet().getJWTID(), blacklisted);
-                valid = valid && !blacklisted;
+                return JwtTokenStatus.INVALID;
             }
+            if (now.before(signedJWT.getJWTClaimsSet().getIssueTime())) {
+                log.warn("token (id: {}), issue time is in the future", signedJWT.getJWTClaimsSet().getJWTID());
+                return JwtTokenStatus.INVALID;
+            }
+            if (!valid) {
+                return JwtTokenStatus.INVALID;
+            }
+
+            UUID uuid = UUID.fromString(signedJWT.getJWTClaimsSet().getJWTID());
+
+            if (!isCustomJwtToken) {
+                boolean blacklisted = jwtTokenInfoRepository.findByJwtUuidAndBlacklistedIsTrue(uuid).isPresent();
+                log.debug("token with id: {} is blacklisted: {}", uuid, blacklisted);
+                return blacklisted ? JwtTokenStatus.INVALID : JwtTokenStatus.VALID;
+            }
+
+            Optional<CustomJwtTokenInfo> tokenInfo = customJwtTokenInfoRepository.findByJwtUuid(uuid);
+
+            boolean blacklisted = tokenInfo.map(CustomJwtTokenInfo::isBlacklisted).orElse(false);
+            log.debug("token with id: {} is blacklisted: {}", uuid, blacklisted);
+            if (blacklisted) {
+                return JwtTokenStatus.INVALID;
+            }
+
+            boolean updateRequired = tokenInfo.map(CustomJwtTokenInfo::isUpdateRequired).orElse(false);
+            log.debug("token with id: {} requires update: {}", uuid, updateRequired);
+            return updateRequired ? JwtTokenStatus.UPDATE_REQUIRED : JwtTokenStatus.VALID;
 
         } catch (Exception e) {
             log.warn("token cannot be verified", e);
-            valid = false;
+            return JwtTokenStatus.INVALID;
         }
-
-        return valid;
     }
 
     public static RSAKey getJwtSignKeyFromKeystore(String keyStoreType, InputStream keystoreInputStream, char[] keystorePassword, String keyAlias) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException {

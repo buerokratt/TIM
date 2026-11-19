@@ -6,6 +6,7 @@ import lombok.Setter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -25,6 +26,16 @@ public class CustomJwtTokenInfo extends GenericJwtTokenInfo {
 
     @Column(name = "custom_claim_keys", columnDefinition = "text")
     private String customClaimKeys;
+
+    /**
+     * "Greylist" flag: the token is still valid, but its holder should refresh it (e.g. via custom-jwt-extend
+     * with new content) because the data it carries is stale. Cleared implicitly, as extending issues a new token.
+     */
+    @Column(name = "update_required", nullable = false)
+    private boolean updateRequired;
+
+    @Column(name = "update_required_date")
+    private Timestamp updateRequiredDate;
 
     public void setCustomClaimKeysFromSet(Set<String> claimsKeys) {
         if (claimsKeys != null && !claimsKeys.isEmpty()) {

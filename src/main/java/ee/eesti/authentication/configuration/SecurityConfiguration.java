@@ -95,7 +95,8 @@ public class SecurityConfiguration {
 
                             .requestMatchers("/jwt/custom-jwt-generate",
                                 "/jwt/custom-jwt-userinfo",
-                                "/jwt/change-jwt-role")
+                                "/jwt/change-jwt-role",
+                                "/jwt/blacklist-sid")
                             .access(new AllowlistAuthorizationManager(allowedJWTIps))
 
                             .requestMatchers("/jwt/**")

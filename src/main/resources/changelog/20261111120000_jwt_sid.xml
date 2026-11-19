@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+
+    <changeSet id="20261111120000" author="Alar Floren">
+        <addColumn schemaName="jwt_blacklist" tableName="jwt_token">
+            <column name="sid" type="text"/>
+        </addColumn>
+        <addColumn schemaName="jwt_blacklist" tableName="custom_jwt_token">
+            <column name="sid" type="text"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20261111120001" author="Alar Floren">
+        <createIndex schemaName="jwt_blacklist" tableName="jwt_token" indexName="idx_jwt_token_sid">
+            <column name="sid"/>
+        </createIndex>
+        <createIndex schemaName="jwt_blacklist" tableName="custom_jwt_token" indexName="idx_custom_jwt_token_sid">
+            <column name="sid"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

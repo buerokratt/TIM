@@ -4,6 +4,7 @@ import ee.eesti.authentication.repository.entity.CustomJwtTokenInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,4 +14,6 @@ public interface CustomJwtTokenInfoRepository extends JpaRepository<CustomJwtTok
     Optional<CustomJwtTokenInfo> findByJwtUuidAndBlacklistedIsTrue(UUID uuid);
 
     Optional<CustomJwtTokenInfo> findByJwtUuid(UUID uuid);
+
+	List<CustomJwtTokenInfo> findBySidAndBlacklistedIsFalse(String sid);
 }

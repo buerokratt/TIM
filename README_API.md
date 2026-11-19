@@ -48,9 +48,11 @@ Content:
 
 	Response:
 		Success:
-			HTTP 200 
+			HTTP 200 - JWT is valid
+		Update required:
+			HTTP 403 - JWT is valid, but has been flagged as update required; refresh it with jwt/custom-jwt-extend
 		Failure:
-			HTTP 400
+			HTTP 401 - JWT is missing or not valid
 
 Example:
 
@@ -80,11 +82,64 @@ curl  -X POST TIM/jwt/custom-jwt-blacklist -d 'customJwtCookie' \
 -H 'Cookie: JWTToken:<token>; customJwtCookie:<token>'
 ```
 
-### POST jwt/custom-jwt-extend
-	Generates and registers a new custom JWT {cookieName} with extended expiration period from existing JWT
-	Fails if JWT is not registered, is blacklisted or is already expired.
+### POST jwt/custom-jwt-update-required
+	Flags custom JWT {cookieName} as update required ("greylisted"). The JWT stays valid, but
+	jwt/custom-jwt-verify returns HTTP 403 and jwt/custom-jwt-userinfo returns "JWTUpdateRequired": true for it
+	until it is replaced via jwt/custom-jwt-extend.
 
 	Content:
+		Body:
+			plain text: {cookieName}
+		Cookie {cookieName}:
+			JWT
+
+	Response:
+		HTTP 200
+
+Example:
+
+```bash
+curl  -X POST TIM/jwt/custom-jwt-update-required -d 'customJwtCookie' \
+-H 'Cookie: JWTToken:<token>; customJwtCookie:<token>'
+```
+
+### POST jwt/custom-jwt-update-required-sid
+	Flags all non-blacklisted custom JWTs whose session id claim equals {sid} as update required.
+	The claim name is configured with jwt-integration.signature.sid-claim (default "sid").
+
+	Content:
+		Body:
+			plain text: {sid}
+
+	Response:
+		Success:
+			HTTP 200 with {"updateRequired": <number of flagged tokens>}
+		Failure:
+			HTTP 400 if sid is missing
+
+Example:
+
+```bash
+curl  -X POST TIM/jwt/custom-jwt-update-required-sid -d '<sid>'
+```
+
+### POST jwt/custom-jwt-extend
+	Blacklists the existing custom JWT and generates and registers a new one.
+	Fails if JWT is not registered, is blacklisted or is already expired.
+	The body can be given in two formats:
+
+	1. JSON object (same as jwt/custom-jwt-generate) - the new JWT contains only the claims given in "content"
+	   and expires "expirationInMinutes" from the current time.
+		Body:
+			"JWTName" - name of the cookie holding the current JWT; the new JWT is set in a cookie of the same name
+			"expirationInMinutes" - lifetime of the new JWT (>= 1)
+			"content" - claims of the new JWT
+		Cookie {JWTName}:
+			JWT
+
+	2. Plain text (legacy) - the new JWT carries over the custom claims of the current JWT (and its update-required
+	   flag, since the claims are unchanged) and gets the same lifetime the current JWT was originally issued with,
+	   counted from the current time.
 		Body:
 			plain text: {cookieName}
 		Cookie {cookieName}:
@@ -94,11 +149,18 @@ curl  -X POST TIM/jwt/custom-jwt-blacklist -d 'customJwtCookie' \
 		Failure: 
 			HTTP 200 with empty payload
 		Success:
-			HTTP 200 with new JWT with expiration time calculated from current time
+			HTTP 200 with new JWT, also set as cookie {JWTName} / {cookieName}
 
 Example:
 
 ```bash
+# JSON - replace claims
+curl  -X POST TIM/jwt/custom-jwt-extend \
+-H 'Content-Type: application/json' \
+-H 'Cookie: JWTToken:<token>; customJwtCookie:<token>' \
+-d '{"JWTName": "customJwtCookie", "expirationInMinutes": 60, "content": {"key": "updated value"}}'
+
+# plain text - keep existing claims
 curl  -X POST TIM/jwt/custom-jwt-extend -d 'customJwtCookie' \
 -H 'Cookie: JWTToken:<token>; customJwtCookie:<token>'
 ```
@@ -117,7 +179,7 @@ curl  -X POST TIM/jwt/custom-jwt-extend -d 'customJwtCookie' \
 		Failure:
 			HTTP 200 with empty payload
 		Success:
-			HTTP 200 with a JSON map with JWT claims and extra keys "JWTCreated" and "JWTExpirationTimestamp" that contain timestamp of JWT creation and expiration respectively.
+			HTTP 200 with a JSON map with JWT claims and extra keys "JWTCreated" and "JWTExpirationTimestamp" that contain timestamp of JWT creation and expiration respectively, and "JWTUpdateRequired" (true if the JWT has been flagged as update required).
 Example:
 
 ```bash

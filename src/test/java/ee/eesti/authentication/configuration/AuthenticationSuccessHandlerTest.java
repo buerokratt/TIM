@@ -26,12 +26,15 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AuthenticationSuccessHandlerTest {
 
     private JwtUtils jwtUtils;
+    private JwtTokenInfoService jwtTokenInfoService;
     private AuthenticationSuccessHandler handler;
 
     @BeforeEach
@@ -41,9 +44,9 @@ class AuthenticationSuccessHandlerTest {
         when(legacyPortalIntegrationConfig.getSessionTimeoutMinutes()).thenReturn(30);
         when(legacyPortalIntegrationConfig.getRedirectUrlAttribute()).thenReturn("url_redirect");
         when(legacyPortalIntegrationConfig.getRequestIpAttribute()).thenReturn("request_ip");
-        JwtTokenInfoService jwtTokenInfoService = mock(JwtTokenInfoService.class);
+        jwtTokenInfoService = mock(JwtTokenInfoService.class);
         jwtUtils = mock(JwtUtils.class);
-        when(jwtUtils.createSignedJwt(any(), any())).thenReturn(mock(SignedJWT.class));
+        when(jwtUtils.createSignedJwt(any(), any(), any())).thenReturn(mock(SignedJWT.class));
         when(jwtUtils.getJwtCookie(any())).thenReturn(new Cookie("JWTTOKEN", "test"));
 
         handler = new AuthenticationSuccessHandler(sessionsService, legacyPortalIntegrationConfig, jwtTokenInfoService, jwtUtils);
@@ -88,9 +91,40 @@ class AuthenticationSuccessHandlerTest {
         assertEquals("EE98765432109", capturedUserInfo.getPersonalCode());
     }
 
+    @Test
+    void govssoSidIsPutIntoJwtAndStored() throws Exception {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("sub", "EE12345678901");
+        attributes.put("given_name", "Jaan");
+        attributes.put("family_name", "Tamm");
+        attributes.put("sid", "govsso-session-1");
+
+        handler.onAuthenticationSuccess(requestWithCallbackUrl(), new MockHttpServletResponse(),
+                authenticationFor(attributes, SecurityConfiguration.REGISTRATION_ID_GOVSSO));
+
+        org.mockito.Mockito.verify(jwtUtils).createSignedJwt(any(), any(), eq("govsso-session-1"));
+        org.mockito.Mockito.verify(jwtTokenInfoService).createJwtTokenInfo(any(), any(), any(), eq("govsso-session-1"));
+    }
+
+    @Test
+    void missingSidIsStoredAsNull() throws Exception {
+        LinkedTreeMap<String, Object> profileAttributes = new LinkedTreeMap<>();
+        profileAttributes.put("given_name", "Mari");
+        profileAttributes.put("family_name", "Mets");
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("sub", "EE98765432109");
+        attributes.put("profile_attributes", profileAttributes);
+
+        handler.onAuthenticationSuccess(requestWithCallbackUrl(), new MockHttpServletResponse(),
+                authenticationFor(attributes, SecurityConfiguration.REGISTRATION_ID_TARA));
+
+        org.mockito.Mockito.verify(jwtUtils).createSignedJwt(any(), any(), isNull());
+        org.mockito.Mockito.verify(jwtTokenInfoService).createJwtTokenInfo(any(), any(), any(), isNull());
+    }
+
     private UserInfo captureUserInfo() {
         ArgumentCaptor<UserInfo> userInfoCaptor = ArgumentCaptor.forClass(UserInfo.class);
-        org.mockito.Mockito.verify(jwtUtils).createSignedJwt(any(), userInfoCaptor.capture());
+        org.mockito.Mockito.verify(jwtUtils).createSignedJwt(any(), userInfoCaptor.capture(), any());
         return userInfoCaptor.getValue();
     }
 

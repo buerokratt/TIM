@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+
+    <!-- "greylist": custom JWT is still valid but its holder must refresh it -->
+    <changeSet id="20261119120000" author="Alar Floren">
+        <addColumn schemaName="jwt_blacklist" tableName="custom_jwt_token">
+            <column name="update_required" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="update_required_date" type="timestamp"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

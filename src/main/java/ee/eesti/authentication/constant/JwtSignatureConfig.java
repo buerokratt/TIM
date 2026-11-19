@@ -23,4 +23,10 @@ public class JwtSignatureConfig {
 
     private String cookieName;
 
+    /**
+     * Name of the session id claim in JWTs issued/read by TIM (regular and custom). Tokens are stored with
+     * this claim's value so they can be blacklisted / flagged as update required per session.
+     */
+    private String sidClaim = "sid";
+
 }
